@@ -4,19 +4,19 @@ options {
   tokenVocab = Python3Lexer;
 }
 
-file_input: (NEWLINE | stmt)* EOF;
-funcdef: 'def' NAME parameters ':' suite;
+file_input: (NEWLINE | stmt)* EOF;// return EOF
+funcdef: 'def' NAME parameters ':' suite;// I have a thought! Let's use a map to remember every (std::string->int)
 parameters: '(' typedargslist? ')';
 typedargslist: (tfpdef ('=' test)? (',' tfpdef ('=' test)?)*);
-tfpdef: NAME ;
+tfpdef: NAME ;// return std::string
 
-stmt: simple_stmt | compound_stmt;
-simple_stmt: small_stmt  NEWLINE;
-small_stmt: expr_stmt | flow_stmt;
+stmt: simple_stmt | compound_stmt;// return simple or compound
+simple_stmt: small_stmt  NEWLINE;// return small
+small_stmt: expr_stmt | flow_stmt;// return expr or flow
 expr_stmt: testlist ( (augassign testlist) |
                      ('=' testlist)*);//连等 加等/减等/...
-augassign: ('+=' | '-=' | '*=' | '/=' | '//=' | '%=' );
-flow_stmt: break_stmt | continue_stmt | return_stmt;
+augassign: ('+=' | '-=' | '*=' | '/=' | '//=' | '%=' );// return 1/2/3/4/5/6
+flow_stmt: break_stmt | continue_stmt | return_stmt;// return brk/cont/ret
 break_stmt: 'break';
 continue_stmt: 'continue';
 return_stmt: 'return' (testlist)?;
