@@ -30,7 +30,7 @@ and_test: not_test ('and' not_test)*;// return true or false
 not_test: 'not' not_test | comparison;// return true or false
 comparison: arith_expr (comp_op arith_expr)*; // return true or false
 comp_op: '<'|'>'|'=='|'>='|'<=' | '!=';// return (self)
-arith_expr: term (addorsub_op term)*;
+arith_expr: term (addorsub_op term)*;// return (result)
 addorsub_op: '+'|'-';
 term: factor (muldivmod_op factor)*;
 muldivmod_op: '*'|'/'|'//'|'%';

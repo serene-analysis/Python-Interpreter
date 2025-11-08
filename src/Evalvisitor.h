@@ -393,8 +393,51 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return false;
 	}
 
+	std::any addOrSub(std::any fir, std::any sec, std::string op){
+		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
+		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
+		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
+		if(gint && sint){
+			int2048 fi = *gint, si = *sint;
+			if(op=="+"){
+				return fi + si;
+			}
+			if(op=="-"){
+				return fi - si;
+			}
+		}
+		if(gdouble && sdouble){
+			double fi = *gdouble, si = *sdouble;
+			if(op=="+"){
+				return fi + si;
+			}
+			if(op=="-"){
+				return fi - si;
+			}
+		}
+		if(gbool && sbool){
+			bool fi = *gbool, si = *sbool;
+			if(op=="+"){
+				return fi + si;
+			}
+			if(op=="-"){
+				return fi - si;
+			}
+		}
+		assert(false);
+		return false;
+	}
+
 	virtual std::any visitArith_expr(Python3Parser::Arith_exprContext *ctx) override {
-		return visitChildren(ctx);
+		std::vector<Python3Parser::TermContext*> term = ctx->term();
+		std::vector<Python3Parser::Addorsub_opContext*> op = ctx->addorsub_op();
+		std::any fir = visit(term[0]);
+		int nsi = term.size();
+		for(int i=1;i<nsi;i++){
+			std::any nv = visit(term[i]);
+			fir = addOrSub(fir, nv, std::any_cast<std::string>(visit(op[i-1])));
+		}
+		return fir;
 	}
 
 	virtual std::any visitAddorsub_op(Python3Parser::Addorsub_opContext *ctx) override {
