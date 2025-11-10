@@ -30,6 +30,8 @@ public:
   friend int2048 div(int2048, int);
   // 构造函数
   int2048();
+  int2048(bool);
+  int2048(int);
   int2048(long long);
   int2048(const std::string &);
   int2048(const int2048 &);
@@ -192,6 +194,39 @@ int2048 int2048::mul(int2048 now, int2048 oth, const int mod){
 }
 int2048::int2048(){
     pol.resize(1), pol[0] = 0, neg = false;
+    return;
+}
+int2048::int2048(bool y){
+    neg = false;
+    sizen(1);
+    if(y){
+        pol[0] = 1;
+    }
+    else{
+        pol[0] = 0;
+    }
+    return;
+}
+int2048::int2048(int y){
+    i128 x = y;
+    neg = false;
+    if(x < 0){
+        neg = true;
+        x = -x;
+    }
+    if(x < base){
+        sizen(1);
+        pol[0] = x;
+    }
+    else if(x < 1ll * base * base){
+        sizen(2);
+        pol[0] = x % base, pol[1] = x / base;
+    }
+    else{
+        sizen(3);
+        pol[0] = x % base, pol[1] = (x / base) % base, pol[2] = x / base / base;
+    }
+    assert(pol.back() || pol.size() == 1);
     return;
 }
 int2048::int2048(long long y){

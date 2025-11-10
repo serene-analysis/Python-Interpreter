@@ -73,21 +73,21 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 									*idiv = ctx->IDIV_ASSIGN(),
 									*mod = ctx->MOD_ASSIGN();
 		if(add){
-			return "add";
+			return std::make_pair("add",-1);
 		}
 		if(sub){
-			return "sub";
+			return std::make_pair("sub",-1);
 		}
 		if(mult){
-			return "mult";
+			return std::make_pair("mult",-1);
 		}
 		if(div){
-			return "div";
+			return std::make_pair("div",-1);
 		}
 		if(idiv){
-			return "idiv";
+			return std::make_pair("idiv",-1);
 		}
-		return "mod";
+		return std::make_pair("mod",-1);
 	}
 
 	virtual std::any visitFlow_stmt(Python3Parser::Flow_stmtContext *ctx) override {
@@ -106,20 +106,20 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	virtual std::any visitBreak_stmt(Python3Parser::Break_stmtContext *ctx) override {
-		return "break";
+		return std::make_pair("break",-1);
 	}
 
 	virtual std::any visitContinue_stmt(Python3Parser::Continue_stmtContext *ctx) override {
-		return "continue";
+		return std::make_pair("continue",-1);
 	}
 
 	virtual std::any visitReturn_stmt(Python3Parser::Return_stmtContext *ctx) override {
 		Python3Parser::TestlistContext *ret = ctx->testlist();
 		if(ret){
-			return std::vector<std::any>{"return", visit(ret)};
+			return std::vector<std::any>{std::make_pair("return", -1), visit(ret)};
 		}
 		else{
-			return "return";
+			return std::vector<std::any>{std::make_pair("return", -1)};
 		}
 	}
 
@@ -136,7 +136,32 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return visit(def);
 	}
 
+	std::any unTie(std::any gave){
+		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
+		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
+		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
+		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
+		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
+		if(gint){
+			return gint->first;
+		}
+		if(gdouble){
+			return gdouble->first;
+		}
+		if(gbool){
+			return gbool->first;
+		}
+		if(gstring){
+			return gstring->first;
+		}
+		if(gvector){
+			return gvector;
+		}
+		//assert(false);//maybe unavoidable
+		return gave;
+	}
 	bool isTrue(std::any ret){
+		ret = unTie(ret);
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
@@ -166,26 +191,23 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 				return visit(ctx->suite().back());
 			}
 		}
-		return "if nothing satisfied";
+		return std::make_pair("if nothing satisfied",-1);
 	}
 
 	bool isString(std::any ret, const std::string &str){
+		ret = unTie(ret);
 		auto *dt = std::any_cast<std::string>(&ret);
 		return dt && *dt == str;
 	}
 
 	bool isReturn(std::any gave){
-		std::vector<std::any> *got = std::any_cast<std::vector<std::any>>(&gave);
+		std::any real = unTie(gave);
+		std::vector<std::pair<std::any,int>> *got = std::any_cast<std::vector<std::pair<std::any,int>>>(&real);
 		if(got){
 			auto ret = *got;
-			if(ret.empty()){
-				return false;
-			}
-			auto *dt = std::any_cast<std::string>(&ret[0]);
-			return dt && isString(*dt, "return");
+			return isString(ret[0].first, "return");
 		}
-		auto *dt = std::any_cast<std::string>(&gave);
-		return dt && *dt == "return";
+		return false;
 	}
 
 	virtual std::any visitWhile_stmt(Python3Parser::While_stmtContext *ctx) override {
@@ -193,17 +215,17 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 			Python3Parser::TestContext *con = ctx->test();
 			std::any got = visit(con);
 			if(!isTrue(got)){
-				return "while condition unsatisfied";
+				return std::make_pair("while condition unsatisfied",-1);
 			}
 			std::any ret = visit(ctx->suite());
 			if(isString(ret,"break")){
 				break;
 			}
-			if(isString(ret, "return")){
-				return "return";
+			if(isReturn(ret)){
+				return ret;
 			}
 		}
-		return "while end";
+		return std::make_pair("while end",-1);
 	}
 
 	virtual std::any visitSuite(Python3Parser::SuiteContext *ctx) override {
@@ -216,16 +238,16 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 			for(Python3Parser::StmtContext *now : stmt){
 				std::any ret = visit(now);
 				if(isString(ret, "continue")){
-					return "continue";
+					return std::make_pair("continue",-1);
 				}
 				if(isString(ret, "break")){
-					return "break";
+					return std::make_pair("break",-1);
 				}
 				if(isReturn(ret)){
 					return ret;
 				}
 			}
-			return "suite unflowed end";
+			return std::make_pair("suite unflowed end",-1);
 		}
 	}
 
@@ -234,11 +256,13 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	bool isTrue(std::any got){
+		got = unTie(got);
 		bool *ret = std::any_cast<bool>(&got);
 		return ret && *ret;
 	}
 
 	bool isFalse(std::any ret){
+		ret = unTie(ret);
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
@@ -283,62 +307,63 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	bool compare(std::any fir, std::any sec, std::string op){
+		fir = unTie(fir), sec = unTie(sec);
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
-			if(op=="<"){
+			if(op == "<"){
 				return fi < si;
 			}
-			if(op=="<="){
+			if(op == "<="){
 				return fi <= si;
 			}
-			if(op==">"){
+			if(op == ">"){
 				return fi > si;
 			}
-			if(op==">="){
+			if(op == ">="){
 				return fi >= si;
 			}
-			if(op=="=="){
+			if(op == "=="){
 				return fi == si;
 			}
 			return fi != si;
 		}
 		if(gdouble && sdouble){
 			double fi = *gdouble, si = *sdouble;
-			if(op=="<"){
+			if(op == "<"){
 				return fi < si;
 			}
-			if(op=="<="){
+			if(op == "<="){
 				return fi <= si;
 			}
-			if(op==">"){
+			if(op == ">"){
 				return fi > si;
 			}
-			if(op==">="){
+			if(op == ">="){
 				return fi >= si;
 			}
-			if(op=="=="){
+			if(op == "=="){
 				return fi == si;
 			}
 			return fi != si;
 		}
 		if(gbool && sbool){
 			bool fi = *gbool, si = *sbool;
-			if(op=="<"){
+			if(op == "<"){
 				return fi < si;
 			}
-			if(op=="<="){
+			if(op == "<="){
 				return fi <= si;
 			}
-			if(op==">"){
+			if(op == ">"){
 				return fi > si;
 			}
-			if(op==">="){
+			if(op == ">="){
 				return fi >= si;
 			}
-			if(op=="=="){
+			if(op == "=="){
 				return fi == si;
 			}
 			return fi != si;
@@ -356,7 +381,7 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		int nsi = comp.size();
 		for(int i=1;i<nsi;i++){
 			std::any nv = visit(ari[i]);
-			if(!compare(fir, nv, std::any_cast<std::string>(visit(comp[i-1])))){
+			if(!compare(fir, nv, std::any_cast<std::string>(unTie(visit(comp[i-1]))))){
 				return false;
 			}
 			fir = nv;
@@ -372,57 +397,63 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 														ctx->LT_EQ(),
 														ctx->NOT_EQ_2()};
 		if(all[0]){
-			return "<";
+			return std::make_pair("<",-1);
 		}
 		if(all[1]){
-			return ">";
+			return std::make_pair(">",-1);
 		}
 		if(all[2]){
-			return "==";
+			return std::make_pair("==",-1);
 		}
 		if(all[3]){
-			return ">=";
+			return std::make_pair(">=",-1);
 		}
 		if(all[4]){
-			return "<=";
+			return std::make_pair("<=",-1);
 		}
 		if(all[5]){
-			return "!=";
+			return std::make_pair("!=",-1);
 		}
 		assert(false);
 		return false;
 	}
 
 	std::any addOrSub(std::any fir, std::any sec, std::string op){
+		fir = unTie(fir), sec = unTie(sec);
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
+		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
-			if(op=="+"){
+			if(op == "+"){
 				return fi + si;
 			}
-			if(op=="-"){
+			if(op == "-"){
 				return fi - si;
 			}
 		}
 		if(gdouble && sdouble){
 			double fi = *gdouble, si = *sdouble;
-			if(op=="+"){
+			if(op == "+"){
 				return fi + si;
 			}
-			if(op=="-"){
+			if(op == "-"){
 				return fi - si;
 			}
 		}
 		if(gbool && sbool){
 			bool fi = *gbool, si = *sbool;
-			if(op=="+"){
+			if(op == "+"){
 				return fi + si;
 			}
-			if(op=="-"){
+			if(op == "-"){
 				return fi - si;
 			}
+		}
+		if(fstring && sstring){
+			assert(op == "+");
+			return *fstring + *sstring;
 		}
 		assert(false);
 		return false;
@@ -435,25 +466,116 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		int nsi = term.size();
 		for(int i=1;i<nsi;i++){
 			std::any nv = visit(term[i]);
-			fir = addOrSub(fir, nv, std::any_cast<std::string>(visit(op[i-1])));
+			fir = addOrSub(fir, nv, std::any_cast<std::string>(unTie(visit(op[i-1]))));
 		}
 		return fir;
 	}
 
 	virtual std::any visitAddorsub_op(Python3Parser::Addorsub_opContext *ctx) override {
+		if(ctx->ADD()){
+			return std::make_pair("+",-1);
+		}
+		else if(ctx->MINUS()){
+			return std::make_pair("-",-1);
+		}
+		assert(false);
 		return visitChildren(ctx);
+	}
+
+	std::any mulDivMod(std::any fir, std::any sec, std::string op){
+		fir = unTie(fir), sec = unTie(sec);
+		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
+		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
+		//auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec); // should not appear?
+		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		if(gint && sint){
+			int2048 fi = *gint, si = *sint;
+			if(op == "*"){
+				return fi * si;
+			}
+			if(op == "/" || op == "//"){
+				return fi / si;
+			}
+			if(op == "%"){
+				return fi % si;
+			}
+			assert(false);
+			return false;
+		}
+		if(gdouble && sdouble){
+			double fi = *gdouble, si = *sdouble;
+			if(op == "*"){
+				return fi * si;
+			}
+			if(op == "/"){
+				return fi / si;
+			}
+			assert(false);
+			return false;
+		}
+		if(fstring && sint){
+			assert(op == "*");
+			std::string ret = *fstring;
+			for(int i=1;i<*sint;i++){
+				ret += *fstring;
+			}
+			return ret;
+		}
+		assert(false);
+		return false;
 	}
 
 	virtual std::any visitTerm(Python3Parser::TermContext *ctx) override {
-		return visitChildren(ctx);
+		std::vector<Python3Parser::FactorContext*> factor = ctx->factor();
+		std::vector<Python3Parser::Muldivmod_opContext*> op = ctx->muldivmod_op();
+		std::any fir = visit(factor[0]);
+		int nsi = factor.size();
+		for(int i=1;i<nsi;i++){
+			std::any nv = visit(factor[i]);
+			fir = mulDivMod(fir, nv, std::any_cast<std::string>(visit(op[i-1])));
+		}
+		return fir;
 	}
 
 	virtual std::any visitMuldivmod_op(Python3Parser::Muldivmod_opContext *ctx) override {
+		if(ctx->STAR()){
+			return std::make_pair("*",-1);
+		}
+		else if(ctx->DIV()){
+			return std::make_pair("/",-1);
+		}
+		else if(ctx->IDIV()){
+			return std::make_pair("//",-1);
+		}
+		else if(ctx->MOD()){
+			return std::make_pair("%",-1);
+		}
+		assert(false);
 		return visitChildren(ctx);
 	}
 
+	std::any getNegativeVal(std::any ret){
+		ret = unTie(ret);
+		int2048 *gint = std::any_cast<int2048>(&ret);
+		auto *gdouble = std::any_cast<double>(&ret);
+		if(gint){
+			return -*gint;
+		}
+		if(gdouble){
+			return -*gdouble;
+		}
+		assert(false);
+		return false;
+	}
+
 	virtual std::any visitFactor(Python3Parser::FactorContext *ctx) override {
-		return visitChildren(ctx);
+		if(ctx->ADD()){
+			return visit(ctx->factor());
+		}
+		if(ctx->MINUS()){
+			return getNegativeVal(visit(ctx->factor()));
+		}
+		return visit(ctx->atom_expr());
 	}
 
 	virtual std::any visitAtom_expr(Python3Parser::Atom_exprContext *ctx) override {
