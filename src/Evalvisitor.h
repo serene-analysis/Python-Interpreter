@@ -9,15 +9,6 @@
 
 
 class EvalVisitor : public Python3ParserBaseVisitor {
-	// TODO: override all methods of Python3ParserBaseVisitor
-	virtual std::any visitFile_input(Python3Parser::File_inputContext *ctx) override {
-		std::vector<Python3Parser::StmtContext *> son = ctx->stmt();
-		for(auto now : son){
-			visit(now);
-		}
-		return ctx->EOF();
-	}
-
 	const static int kMaxn = 1e4+5;
 	std::unordered_map<std::string,int>funcId;
 	std::unordered_map<int,std::any>memory[kMaxn];
@@ -25,11 +16,19 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
 	int depth;
 	int func_id = -7, variable_id = 1;
-	funcId["print"] = -2;
-	funcId["int"] = -3;
-	funcId["float"] = -4;
-	funcId["str"] = -5;
-	funcId["bool"] = -6;
+	// TODO: override all methods of Python3ParserBaseVisitor
+	virtual std::any visitFile_input(Python3Parser::File_inputContext *ctx) override {
+		funcId["print"] = -2;
+		funcId["int"] = -3;
+		funcId["float"] = -4;
+		funcId["str"] = -5;
+		funcId["bool"] = -6;
+		std::vector<Python3Parser::StmtContext *> son = ctx->stmt();
+		for(auto now : son){
+			visit(now);
+		}
+		return ctx->EOF();
+	}
 
 	std::string removeQuotes(std::string str){
 		assert(str[0] == '\'' || str[0] == '\"');
@@ -875,6 +874,9 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	virtual std::any visitAtom(Python3Parser::AtomContext *ctx) override {
 		if(auto now = ctx->NAME(); now){
 			std::string name = now->getText();
+			if(funcId.count(name)){
+				return std::make_pair(name, funcId[name]);
+			}
 			if(!valuePosition(name)){
 				assignValue(std::make_pair(std::any(false),variable_id),
 						std::make_pair(std::any(0),0));
