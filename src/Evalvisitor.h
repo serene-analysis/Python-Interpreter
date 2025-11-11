@@ -25,15 +25,11 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
 	int depth;
 	int func_id = -7, variable_id = 1;
-
-	EvalVisitor(){
-		funcId["print"] = -2;
-		funcId["int"] = -3;
-		funcId["float"] = -4;
-		funcId["str"] = -5;
-		funcId["bool"] = -6;
-		return;
-	}
+	funcId["print"] = -2;
+	funcId["int"] = -3;
+	funcId["float"] = -4;
+	funcId["str"] = -5;
+	funcId["bool"] = -6;
 
 	std::string removeQuotes(std::string str){
 		assert(str[0] == '\'' || str[0] == '\"');
