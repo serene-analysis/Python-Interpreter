@@ -7,7 +7,10 @@
 #include "int2048.h"
 #include <iomanip>
 
+//#define DEBUG
 
+
+using sjtu::int2048;
 class EvalVisitor : public Python3ParserBaseVisitor {
 	const static int kMaxn = 1e4+5;
 	std::unordered_map<std::string,int>funcId;
@@ -18,12 +21,22 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	int func_id = -7, variable_id = 1;
 	// TODO: override all methods of Python3ParserBaseVisitor
 	virtual std::any visitFile_input(Python3Parser::File_inputContext *ctx) override {
+#ifdef DEBUG
+std::cerr << "hello!" << '\n';
+#endif
 		funcId["print"] = -2;
 		funcId["int"] = -3;
 		funcId["float"] = -4;
 		funcId["str"] = -5;
 		funcId["bool"] = -6;
 		std::vector<Python3Parser::StmtContext *> son = ctx->stmt();
+		auto newline = ctx->NEWLINE();
+#ifdef DEBUG
+printf("stmt.size() = %d, newline.size() = %d\n", (int)son.size(), (int)newline.size());
+if(ctx->EOF()){
+	printf("have EOF\n");
+}
+#endif
 		for(auto now : son){
 			visit(now);
 		}
@@ -56,6 +69,9 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	virtual std::any visitStmt(Python3Parser::StmtContext *ctx) override {
+#ifdef DEBUG
+printf("visitStmt\n");
+#endif
 		Python3Parser::Simple_stmtContext *simple = ctx->simple_stmt();
 		Python3Parser::Compound_stmtContext *compound = ctx->compound_stmt();
 		if(simple){
@@ -218,7 +234,10 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	virtual std::any visitExpr_stmt(Python3Parser::Expr_stmtContext *ctx) override {
-		std::vector<std::pair<std::any,int>>ret;
+#ifdef DEBUG
+printf("visitExprstmt\n");
+#endif
+		std::vector<std::pair<std::any,int>>ret,lmem;
 		if(!ctx->ASSIGN().empty()){
 			auto testlist = ctx->testlist();
 			int nsi = testlist.size();
@@ -227,13 +246,15 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 				int osi = fir.size();
 				for(int j=0;j<osi;j++){
 					std::any lef = visit(fir[j]), rig = visit(sec[j]);
-					assignValue(std::any_cast<std::pair<std::any,int>>(lef),
-								std::any_cast<std::pair<std::any,int>>(rig));
+					lmem.push_back(std::any_cast<std::pair<std::any,int>>(lef));
 					ret.push_back(std::any_cast<std::pair<std::any,int>>(rig));
+				}
+				for(int j=0;j<osi;j++){
+					assignValue(lmem[j],ret[j]);
 				}
 			}
 		}
-		else{
+		else if(!(!ctx->augassign())){
 			auto testlist = ctx->testlist();
 			auto aug = ctx->augassign();
 			int nsi = testlist.size();
@@ -254,6 +275,9 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 				int id = std::any_cast<std::pair<std::any,int>>(lef).second;
 				ret.push_back(std::make_pair(memory[depth][id],id));
 			}
+		}
+		else{
+			return visit(ctx->testlist(0));
 		}
 		return visitChildren(ctx);
 	}
@@ -312,7 +336,7 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 			return std::vector<std::any>{std::make_pair("return", -1), visit(ret)};
 		}
 		else{
-			return std::vector<std::any>{std::make_pair("return", -1)};
+			return std::vector<std::any>{std::make_pair("return", -1), std::make_pair(0, 0)};
 		}
 	}
 
@@ -415,6 +439,9 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	virtual std::any visitTest(Python3Parser::TestContext *ctx) override {
+#ifdef DEBUG
+printf("visitTest\n");
+#endif
 		return visit(ctx->or_test());
 	}
 
@@ -428,38 +455,55 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 
 	virtual std::any visitOr_test(Python3Parser::Or_testContext *ctx) override {
 		std::vector<Python3Parser::And_testContext*> got = ctx->and_test();
+		if(got.size() == 1){
+			return visit(got[0]);
+		}
 		int nsi = got.size();
 		for(int i=0;i<nsi;i++){
 			if(isTrue(visit(got[i]))){
-				return true;
+				return std::make_pair(true,-1);
 			}
 		}
-		return false;
+		return std::make_pair(false,-1);
 	}
 
 	virtual std::any visitAnd_test(Python3Parser::And_testContext *ctx) override {
 		std::vector<Python3Parser::Not_testContext*> got = ctx->not_test();
+		if(got.size() == 1){
+			return visit(got[0]);
+		}
 		int nsi = got.size();
 		for(int i=0;i<nsi;i++){
 			if(isFalse(visit(got[i]))){
-				return false;
+				return std::make_pair(false,-1);
 			}
 		}
-		return true;
+		return std::make_pair(true,-1);
 	}
 
 	virtual std::any visitNot_test(Python3Parser::Not_testContext *ctx) override {
 		Python3Parser::Not_testContext *ntest = ctx->not_test();
 		Python3Parser::ComparisonContext *comp = ctx->comparison();
+#ifdef DEBUG
+printf("visitNotTest\n");
+#endif
 		if(ntest){
+#ifdef DEBUG
+printf("not_test\n");
+#endif
 			std::any ret = visit(ntest);
-			assert(isTrue(ret) || isFalse(ret));
-			return isFalse(ret);
+			if(ctx->NOT()){
+				return std::make_pair(isFalse(ret),-1);
+			}
+			else{
+				return ret;
+			}
 		}
 		else{
-			std::any ret = visit(comp);
-			assert(isTrue(ret) || isFalse(ret));
-			return isFalse(ret);
+#ifdef DEBUG
+printf("comparison\n");
+#endif
+			return visit(comp);
 		}
 	}
 
@@ -533,17 +577,20 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		std::vector<Python3Parser::Comp_opContext*> comp = ctx->comp_op();
 		std::any fir = visit(ari[0]);
 		if(comp.empty()){
-			return isTrue(fir);
+#ifdef DEBUG
+printf("no comparison\n");
+#endif
+			return fir;
 		}
 		int nsi = comp.size();
 		for(int i=1;i<nsi;i++){
 			std::any nv = visit(ari[i]);
 			if(!compare(fir, nv, std::any_cast<std::string>(unTie(visit(comp[i-1]))))){
-				return false;
+				return std::make_pair(false, -1);
 			}
 			fir = nv;
 		}
-		return true;
+		return std::make_pair(true, -1);
 	}
 
 	virtual std::any visitComp_op(Python3Parser::Comp_opContext *ctx) override {
@@ -739,8 +786,14 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		}
 		else{
 			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
+#ifdef DEBUG
+printf("arg.size() = %d\n", (int)arg.size());
+#endif
 			for(auto now : arg){
 				std::vector<Python3Parser::TestContext*> test = now->test();
+#ifdef DEBUG
+printf("test.size() = %d\n", (int)test.size());
+#endif
 				if(test.size() != 1){
 					auto gfir = visit(test[0]), gsec = visit(test[1]);
 					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
@@ -751,9 +804,11 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 			if(id == -2){
 				for(auto now : arg){
 					std::vector<Python3Parser::TestContext*> test = now->test();
-					auto gfir = visit(test[0]);
-					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir);
-					if(std::pair<int2048,int> *dt = std::any_cast<std::pair<int2048,int>*>(fir); dt){
+					auto fir = visit(test[0]);
+					if(std::pair<int2048,int> *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+#ifdef DEBUG
+printf("print:int2048\n");
+#endif
 						if(dt->second == 0){
 							std::cout << "None" << ' ';
 						}
@@ -761,13 +816,22 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 							std::cout << dt->first << ' ';
 						}
 					}
-					if(std::pair<double,int> *dt = std::any_cast<std::pair<double,int>*>(fir); dt){
+					if(std::pair<double,int> *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
+#ifdef DEBUG
+printf("print:double\n");
+#endif
 						std::cout << std::fixed << std::setprecision(6) << dt->first << ' ';
 					}
-					if(std::pair<std::string,int> *dt = std::any_cast<std::pair<std::string,int>*>(fir); dt){
+					if(std::pair<std::string,int> *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
+#ifdef DEBUG
+printf("print:string\n");
+#endif
 						std::cout << dt->first << ' ';
 					}
-					if(std::pair<bool,int> *dt = std::any_cast<std::pair<bool,int>*>(fir); dt){
+					if(std::pair<bool,int> *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
+#ifdef DEBUG
+printf("print:bool\n");
+#endif
 						if(dt->first){
 							std::cout << "True" << ' ';
 						}
@@ -777,6 +841,7 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 					}
 				}
 				std::cout << '\n';
+				return std::make_pair(0, 0);
 			}
 			else if(id == -3){
 				auto fir = visit(arg[0]->test()[0]);
@@ -853,14 +918,26 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	virtual std::any visitAtom_expr(Python3Parser::Atom_exprContext *ctx) override {
+#ifdef DEBUG
+printf("visitAtomexpr\n");
+#endif
 		std::any down = visit(ctx->atom());
 		if(auto *val = std::any_cast<std::pair<std::string,int>>(&down); val){
 			if(val->second <= -7){
+#ifdef DEBUG
+printf("visitOuterFunction\n");
+#endif
 				return functionWork(function[val->second], ctx->trailer());
 			}
 			if(val->second >= -6 && val->second <= -2){
+#ifdef DEBUG
+printf("visitInsideFunction\n");
+#endif
 				return insideFunction(val->second, ctx->trailer());
 			}
+#ifdef DEBUG
+printf("std::pair<std::string,int>\n");
+#endif
 			return down;
 		}
 		assert(ctx->trailer() == nullptr);
@@ -872,9 +949,18 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	}
 
 	virtual std::any visitAtom(Python3Parser::AtomContext *ctx) override {
+#ifdef DEBUG
+printf("visitAtom\n");
+#endif
 		if(auto now = ctx->NAME(); now){
 			std::string name = now->getText();
+#ifdef DEBUG
+printf("name:"), std::cout << name << '\n';
+#endif
 			if(funcId.count(name)){
+#ifdef DEBUG
+printf("funcId = %d\n", funcId[name]);
+#endif
 				return std::make_pair(name, funcId[name]);
 			}
 			if(!valuePosition(name)){
@@ -899,16 +985,19 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 			for(auto val : now){
 				ret += removeQuotes(val->getText());
 			}
-			return ret;
+#ifdef DEBUG
+printf("string:"), std::cout << ret << '\n';
+#endif
+			return std::make_pair(ret,-1);
 		}
 		if(auto now = ctx->NONE(); now){
 			return std::make_pair("None",0);
 		}
 		if(auto now = ctx->TRUE(); now){
-			return std::make_pair(true,0);
+			return std::make_pair(true,-1);
 		}
 		if(auto now = ctx->FALSE(); now){
-			return std::make_pair(false,0);
+			return std::make_pair(false,-1);
 		}
 		if(auto now = ctx->test(); now){
 			return visit(now);
