@@ -8,12 +8,14 @@
 #include <iomanip>
 
 //#define DEBUG
+//#define DEBUG_comparison
 
 
 using sjtu::int2048;
 class EvalVisitor : public Python3ParserBaseVisitor {
 	const static int kMaxn = 1e4+5;
 	std::unordered_map<std::string,int>funcId;
+	std::unordered_map<std::string,int>variableId;
 	std::unordered_map<int,std::any>memory[kMaxn];
 	std::unordered_map<int,bool>covered[kMaxn];
 	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
@@ -21,9 +23,9 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	int func_id = -7, variable_id = 1;
 	// TODO: override all methods of Python3ParserBaseVisitor
 	virtual std::any visitFile_input(Python3Parser::File_inputContext *ctx) override {
-#ifdef DEBUG
-std::cerr << "hello!" << '\n';
-#endif
+//#ifdef DEBUG
+//std::cerr << "hello!" << '\n';
+//#endif
 		funcId["print"] = -2;
 		funcId["int"] = -3;
 		funcId["float"] = -4;
@@ -31,12 +33,12 @@ std::cerr << "hello!" << '\n';
 		funcId["bool"] = -6;
 		std::vector<Python3Parser::StmtContext *> son = ctx->stmt();
 		auto newline = ctx->NEWLINE();
-#ifdef DEBUG
-printf("stmt.size() = %d, newline.size() = %d\n", (int)son.size(), (int)newline.size());
-if(ctx->EOF()){
-	printf("have EOF\n");
-}
-#endif
+//#ifdef DEBUG
+//printf("stmt.size() = %d, newline.size() = %d\n", (int)son.size(), (int)newline.size());
+//if(ctx->EOF()){
+//	printf("have EOF\n");
+//}
+//#endif
 		for(auto now : son){
 			visit(now);
 		}
@@ -98,8 +100,66 @@ printf("visitStmt\n");
 		}
 	}
 
+	std::any abstractize(std::any gave){
+		std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
+		std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
+		std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
+		std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
+		std::pair<std::any,int> *got5 = std::any_cast<std::pair<std::any,int>>(&gave);
+		if(got){
+			std::any nv = got->first;
+			return std::make_pair(nv,got->second);
+		}
+		if(got2){
+			std::any nv = got2->first;
+			return std::make_pair(nv,got2->second);
+		}
+		if(got3){
+			std::any nv = got3->first;
+			return std::make_pair(nv,got3->second);
+		}
+		if(got4){
+			std::any nv = got4->first;
+			return std::make_pair(nv,got4->second);
+		}
+		if(got5){
+			return *got5;
+		}
+		assert(false);
+		return false;
+	}
+
+	std::any concretize(std::any gave){
+		std::pair<std::any,int> *must = std::any_cast<std::pair<std::any,int>>(&gave);
+		if(!must){
+			abstractize(gave);//Just to check the state
+			return gave;
+		}
+#ifdef DEBUG
+abstractize(gave);
+#endif
+		int2048 *got = std::any_cast<int2048>(&must->first);
+		double *got2 = std::any_cast<double>(&must->first);
+		std::string *got3 = std::any_cast<std::string>(&must->first);
+		bool *got4 = std::any_cast<bool>(&must->first);
+		if(got){
+			return std::make_pair(*got,must->second);
+		}
+		if(got2){
+			return std::make_pair(*got2,must->second);
+		}
+		if(got3){
+			return std::make_pair(*got3,must->second);
+		}
+		if(got4){
+			return std::make_pair(*got4,must->second);
+		}
+		assert(false);
+		return false;
+	}
 	
 	std::any unTie(std::any gave){
+		gave = concretize(gave);
 		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
 		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
 		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
@@ -131,25 +191,50 @@ printf("visitStmt\n");
 	}
 
 	int valuePosition(std::string name){
-		for(auto now=memory[depth].begin();now!=memory[depth].end();now++){
-			if(isString(now->second, name)){
-				return now->first;
-			}
+		if(variableId.count(name)){
+			return variableId[name];
 		}
 		return 0;
 	}
 
 	void assignValue(std::pair<std::any,int> fir, std::pair<std::any,int> sec){
+#ifdef DEBUG
+printf("assignValue\n");
+#endif
 		int id = fir.second;
 		for(int i=0;i<=depth;i++){
 			if(!covered[i][id]){
-				memory[i][id] = sec;
+				/*std::any gave = concretize(sec);
+				std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
+				std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
+				std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
+				std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
+				if(got){
+					memory[i][id] = got->first;
+				}
+				else if(got2){
+					memory[i][id] = got2->first;
+				}
+				else if(got3){
+					memory[i][id] = got3->first;
+				}
+				else if(got4){
+					memory[i][id] = got4->first;
+				}
+				else{
+					assert(false);
+				}*/
+				std::pair<std::any,int> gave = std::any_cast<std::pair<std::any,int>>(abstractize(sec));
+				memory[i][id] = gave.first;
 			}
 		}
 		return;
 	}
 	
 	std::any addOrSub(std::any fir, std::any sec, std::string op){
+#ifdef DEBUG
+std::cout << "op = " << op << '\n';
+#endif
 		fir = unTie(fir), sec = unTie(sec);
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
@@ -158,33 +243,33 @@ printf("visitStmt\n");
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "+"){
-				return fi + si;
+				return std::make_pair(fi + si,-1);
 			}
 			if(op == "-"){
-				return fi - si;
+				return std::make_pair(fi - si,-1);
 			}
 		}
 		if(gdouble && sdouble){
 			double fi = *gdouble, si = *sdouble;
 			if(op == "+"){
-				return fi + si;
+				return std::make_pair(fi + si,-1);
 			}
 			if(op == "-"){
-				return fi - si;
+				return std::make_pair(fi - si,-1);
 			}
 		}
 		if(gbool && sbool){
 			bool fi = *gbool, si = *sbool;
 			if(op == "+"){
-				return fi + si;
+				return std::make_pair(fi + si,-1);
 			}
 			if(op == "-"){
-				return fi - si;
+				return std::make_pair(fi - si,-1);
 			}
 		}
 		if(fstring && sstring){
 			assert(op == "+");
-			return *fstring + *sstring;
+			return std::make_pair(*fstring + *sstring,-1);
 		}
 		assert(false);
 		return false;
@@ -199,13 +284,13 @@ printf("visitStmt\n");
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "*"){
-				return fi * si;
+				return std::make_pair(fi * si,-1);
 			}
 			if(op == "/" || op == "//"){
-				return fi / si;
+				return std::make_pair(fi / si,-1);
 			}
 			if(op == "%"){
-				return fi % si;
+				return std::make_pair(fi % si,-1);
 			}
 			assert(false);
 			return false;
@@ -213,10 +298,10 @@ printf("visitStmt\n");
 		if(gdouble && sdouble){
 			double fi = *gdouble, si = *sdouble;
 			if(op == "*"){
-				return fi * si;
+				return std::make_pair(fi * si,-1);
 			}
 			if(op == "/"){
-				return fi / si;
+				return std::make_pair(fi / si,-1);
 			}
 			assert(false);
 			return false;
@@ -227,7 +312,7 @@ printf("visitStmt\n");
 			for(int i=1;i<*sint;i++){
 				ret += *fstring;
 			}
-			return ret;
+			return std::make_pair(ret,-1);
 		}
 		assert(false);
 		return false;
@@ -245,9 +330,17 @@ printf("visitExprstmt\n");
 				auto fir = testlist[i-1]->test(), sec = testlist[i]->test();
 				int osi = fir.size();
 				for(int j=0;j<osi;j++){
-					std::any lef = visit(fir[j]), rig = visit(sec[j]);
-					lmem.push_back(std::any_cast<std::pair<std::any,int>>(lef));
-					ret.push_back(std::any_cast<std::pair<std::any,int>>(rig));
+#ifdef DEBUG
+printf("testlist:%d,%d\ntest:%d\n",i-1,i,j);
+#endif
+					std::any lef = abstractize(visit(fir[j])), rig = abstractize(visit(sec[j]));
+					std::pair<std::any,int> *lefv = std::any_cast<std::pair<std::any,int>>(&lef),
+											*rigv = std::any_cast<std::pair<std::any,int>>(&rig);
+					if(!lefv || !rigv){
+						assert(false);
+					}
+					lmem.push_back(*lefv);
+					ret.push_back(*rigv);
 				}
 				for(int j=0;j<osi;j++){
 					assignValue(lmem[j],ret[j]);
@@ -264,15 +357,15 @@ printf("visitExprstmt\n");
 			std::string op = std::any_cast<std::pair<std::string,int>>(visit(aug)).first;
 			op.pop_back();
 			if(op == "+" || op == "-"){
-				assignValue(std::any_cast<std::pair<std::any,int>>(lef),
-							std::any_cast<std::pair<std::any,int>>(addOrSub(lef, rig, op)));
-				int id = std::any_cast<std::pair<std::any,int>>(lef).second;
+				assignValue(std::any_cast<std::pair<std::any,int>>(abstractize(lef)),
+							std::any_cast<std::pair<std::any,int>>(abstractize(addOrSub(lef, rig, op))));
+				int id = std::any_cast<std::pair<std::any,int>>(abstractize(lef)).second;
 				ret.push_back(std::make_pair(memory[depth][id],id));
 			}
 			else{
-				assignValue(std::any_cast<std::pair<std::any,int>>(lef),
-							std::any_cast<std::pair<std::any,int>>(mulDivMod(lef, rig, op)));
-				int id = std::any_cast<std::pair<std::any,int>>(lef).second;
+				assignValue(std::any_cast<std::pair<std::any,int>>(abstractize(lef)),
+							std::any_cast<std::pair<std::any,int>>(abstractize(mulDivMod(lef, rig, op))));
+				int id = std::any_cast<std::pair<std::any,int>>(abstractize(lef)).second;
 				ret.push_back(std::make_pair(memory[depth][id],id));
 			}
 		}
@@ -333,10 +426,10 @@ printf("visitExprstmt\n");
 	virtual std::any visitReturn_stmt(Python3Parser::Return_stmtContext *ctx) override {
 		Python3Parser::TestlistContext *ret = ctx->testlist();
 		if(ret){
-			return std::vector<std::any>{std::make_pair("return", -1), visit(ret)};
+			return std::vector<std::pair<std::any,int>>{std::make_pair("return", -1), std::any_cast<std::pair<std::any,int>>(abstractize(visit(ret)))};
 		}
 		else{
-			return std::vector<std::any>{std::make_pair("return", -1), std::make_pair(0, 0)};
+			return std::vector<std::pair<std::any,int>>{std::make_pair("return", -1), std::make_pair((std::any)(0), 0)};
 		}
 	}
 
@@ -484,13 +577,13 @@ printf("visitTest\n");
 	virtual std::any visitNot_test(Python3Parser::Not_testContext *ctx) override {
 		Python3Parser::Not_testContext *ntest = ctx->not_test();
 		Python3Parser::ComparisonContext *comp = ctx->comparison();
-#ifdef DEBUG
-printf("visitNotTest\n");
-#endif
+//#ifdef DEBUG
+//printf("visitNotTest\n");
+//#endif
 		if(ntest){
-#ifdef DEBUG
-printf("not_test\n");
-#endif
+//#ifdef DEBUG
+//printf("not_test\n");
+//#endif
 			std::any ret = visit(ntest);
 			if(ctx->NOT()){
 				return std::make_pair(isFalse(ret),-1);
@@ -500,9 +593,9 @@ printf("not_test\n");
 			}
 		}
 		else{
-#ifdef DEBUG
-printf("comparison\n");
-#endif
+//#ifdef DEBUG
+//printf("comparison\n");
+//#endif
 			return visit(comp);
 		}
 	}
@@ -514,6 +607,9 @@ printf("comparison\n");
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
+#ifdef DEBUG_comparison
+std::cout << "fi = " << fi << "\nsi = " << si << '\n';
+#endif
 			if(op == "<"){
 				return fi < si;
 			}
@@ -572,20 +668,41 @@ printf("comparison\n");
 		assert(false);
 		return false;
 	}
+
+	void checkState(std::any gave, std::string name = "default"){
+		std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
+		std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
+		std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
+		std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
+		std::pair<std::any,int> *got5 = std::any_cast<std::pair<std::any,int>>(&gave);
+		if(!got && !got2 && !got3 && !got4 && !got5){
+			std::cout << "checkState error,name = " << name << '\n';
+			assert(false);
+		}
+		return;
+	}
+
 	virtual std::any visitComparison(Python3Parser::ComparisonContext *ctx) override {
 		std::vector<Python3Parser::Arith_exprContext*> ari = ctx->arith_expr();
 		std::vector<Python3Parser::Comp_opContext*> comp = ctx->comp_op();
+#ifdef DEBUG_comparison
+printf("visitComparison\n");
+#endif
 		std::any fir = visit(ari[0]);
 		if(comp.empty()){
-#ifdef DEBUG
-printf("no comparison\n");
-#endif
+//#ifdef DEBUG
+//printf("no comparison\n");
+//#endif
+			//checkState(fir, "visitComparison");
 			return fir;
 		}
 		int nsi = comp.size();
-		for(int i=1;i<nsi;i++){
-			std::any nv = visit(ari[i]);
-			if(!compare(fir, nv, std::any_cast<std::string>(unTie(visit(comp[i-1]))))){
+#ifdef DEBUG_comparison
+printf("nsi = %d\n",nsi);
+#endif
+		for(int i=0;i<nsi;i++){
+			std::any nv = visit(ari[i+1]);
+			if(!compare(fir, nv, std::any_cast<std::string>(unTie(visit(comp[i]))))){
 				return std::make_pair(false, -1);
 			}
 			fir = nv;
@@ -601,22 +718,22 @@ printf("no comparison\n");
 														ctx->LT_EQ(),
 														ctx->NOT_EQ_2()};
 		if(all[0]){
-			return std::make_pair("<",-1);
+			return std::make_pair(std::string("<"),-1);
 		}
 		if(all[1]){
-			return std::make_pair(">",-1);
+			return std::make_pair(std::string(">"),-1);
 		}
 		if(all[2]){
-			return std::make_pair("==",-1);
+			return std::make_pair(std::string("=="),-1);
 		}
 		if(all[3]){
-			return std::make_pair(">=",-1);
+			return std::make_pair(std::string(">="),-1);
 		}
 		if(all[4]){
-			return std::make_pair("<=",-1);
+			return std::make_pair(std::string("<="),-1);
 		}
 		if(all[5]){
-			return std::make_pair("!=",-1);
+			return std::make_pair(std::string("!="),-1);
 		}
 		assert(false);
 		return false;
@@ -625,21 +742,33 @@ printf("no comparison\n");
 	virtual std::any visitArith_expr(Python3Parser::Arith_exprContext *ctx) override {
 		std::vector<Python3Parser::TermContext*> term = ctx->term();
 		std::vector<Python3Parser::Addorsub_opContext*> op = ctx->addorsub_op();
+#ifdef DEBUG
+printf("visitArith_expr\n");
+#endif
 		std::any fir = visit(term[0]);
-		int nsi = term.size();
-		for(int i=1;i<nsi;i++){
-			std::any nv = visit(term[i]);
-			fir = addOrSub(fir, nv, std::any_cast<std::string>(unTie(visit(op[i-1]))));
+		int nsi = op.size();
+		for(int i=0;i<nsi;i++){
+			std::any nv = visit(term[i+1]);
+#ifdef DEBUG
+printf("i=%d\n",i);
+#endif
+			fir = addOrSub(fir, nv, std::any_cast<std::pair<std::string,int>>(visit(op[i])).first);
 		}
+		if(nsi == 1){
+			//checkState(fir, "visitArith_expr");
+		}
+#ifdef DEBUG
+printf("end : visitArith_expr\n");
+#endif
 		return fir;
 	}
 
 	virtual std::any visitAddorsub_op(Python3Parser::Addorsub_opContext *ctx) override {
 		if(ctx->ADD()){
-			return std::make_pair("+",-1);
+			return std::make_pair(std::string("+"),-1);
 		}
 		else if(ctx->MINUS()){
-			return std::make_pair("-",-1);
+			return std::make_pair(std::string("-"),-1);
 		}
 		assert(false);
 		return visitChildren(ctx);
@@ -649,29 +778,43 @@ printf("no comparison\n");
 		std::vector<Python3Parser::FactorContext*> factor = ctx->factor();
 		std::vector<Python3Parser::Muldivmod_opContext*> op = ctx->muldivmod_op();
 		std::any fir = visit(factor[0]);
-		int nsi = factor.size();
-		for(int i=1;i<nsi;i++){
-			std::any nv = visit(factor[i]);
-			fir = mulDivMod(fir, nv, std::any_cast<std::string>(visit(op[i-1])));
+		int nsi = op.size();
+		for(int i=0;i<nsi;i++){
+			std::any nv = visit(factor[i+1]);
+			fir = mulDivMod(fir, nv, std::any_cast<std::pair<std::string,int>>(visit(op[i])).first);
 		}
 		return fir;
 	}
 
 	virtual std::any visitMuldivmod_op(Python3Parser::Muldivmod_opContext *ctx) override {
 		if(ctx->STAR()){
-			return std::make_pair("*",-1);
+			return std::make_pair(std::string("*"),-1);
 		}
 		else if(ctx->DIV()){
-			return std::make_pair("/",-1);
+			return std::make_pair(std::string("/"),-1);
 		}
 		else if(ctx->IDIV()){
-			return std::make_pair("//",-1);
+			return std::make_pair(std::string("//"),-1);
 		}
 		else if(ctx->MOD()){
-			return std::make_pair("%",-1);
+			return std::make_pair(std::string("%"),-1);
 		}
 		assert(false);
 		return visitChildren(ctx);
+	}
+
+	std::any getVal(std::any ret){
+		ret = unTie(ret);
+		int2048 *gint = std::any_cast<int2048>(&ret);
+		auto *gdouble = std::any_cast<double>(&ret);
+		if(gint){
+			return std::make_pair(*gint,-1);
+		}
+		if(gdouble){
+			return std::make_pair(*gdouble,-1);
+		}
+		assert(false);
+		return false;
 	}
 
 	std::any getNegativeVal(std::any ret){
@@ -679,10 +822,10 @@ printf("no comparison\n");
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
 		if(gint){
-			return -*gint;
+			return std::make_pair(-*gint,-1);
 		}
 		if(gdouble){
-			return -*gdouble;
+			return std::make_pair(-*gdouble,-1);
 		}
 		assert(false);
 		return false;
@@ -690,12 +833,14 @@ printf("no comparison\n");
 
 	virtual std::any visitFactor(Python3Parser::FactorContext *ctx) override {
 		if(ctx->ADD()){
-			return visit(ctx->factor());
+			return getVal(visit(ctx->factor()));
 		}
 		if(ctx->MINUS()){
 			return getNegativeVal(visit(ctx->factor()));
 		}
-		return visit(ctx->atom_expr());
+		std::any ret = visit(ctx->atom_expr());
+		//checkState(ret, "visitFactor");
+		return ret;
 	}
 
 	std::any functionWork(Python3Parser::FuncdefContext *fun, Python3Parser::TrailerContext *tra){
@@ -705,7 +850,7 @@ printf("no comparison\n");
 			for(auto now : arg){
 				std::vector<Python3Parser::TestContext*> test = now->test();
 				if(test.size() != 1){
-					auto gfir = visit(test[0]), gsec = visit(test[1]);
+					auto gfir = abstractize(visit(test[0])), gsec = abstractize(visit(test[1]));
 					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
 											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
 					assignValue(*fir, *sec);
@@ -727,11 +872,13 @@ printf("no comparison\n");
 				std::string name = removeQuotes(var[0]->NAME()->getText());
 				if(!valuePosition(name)){
 					assignValue(std::make_pair(std::any(false),variable_id),
-							std::make_pair(std::any(0),0));
+							std::make_pair(int2048(0),0));
 					variable_id++;
 				}
 				int pos = valuePosition(name);
-				assignValue(std::make_pair(memory[depth][pos],pos), std::make_pair(visit(arg[i]->test()[0]),-1));
+				assignValue(std::make_pair(memory[depth][pos],pos), 
+							std::make_pair(std::any_cast<std::pair<std::any,int>>
+								(abstractize(visit(arg[i]->test()[0]))).first,-1));
 				covered[depth][pos] = true;
 			}
 			assert(arg.size() + test.size() >= var.size());
@@ -739,12 +886,13 @@ printf("no comparison\n");
 				std::string name = removeQuotes(var[i]->NAME()->getText());
 				if(!valuePosition(name)){
 					assignValue(std::make_pair(std::any(false),variable_id),
-							std::make_pair(std::any(0),0));
+							std::make_pair(int2048(0),0));
 					variable_id++;
 				}
 				int pos = valuePosition(name);
-				assignValue(std::make_pair(memory[depth][pos],pos),
-					std::make_pair(visit(test[test.size()-(var.size()-i)]),-1));
+				assignValue(std::make_pair(memory[depth][pos],pos), 
+							std::make_pair(std::any_cast<std::pair<std::any,int>>
+								(abstractize(visit(test[test.size()-(var.size()-i)]))).first,-1));
 				covered[depth][pos] = true;
 			}
 		}
@@ -795,7 +943,7 @@ printf("arg.size() = %d\n", (int)arg.size());
 printf("test.size() = %d\n", (int)test.size());
 #endif
 				if(test.size() != 1){
-					auto gfir = visit(test[0]), gsec = visit(test[1]);
+					auto gfir = abstractize(visit(test[0])), gsec = abstractize(visit(test[1]));
 					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
 											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
 					assignValue(*fir, *sec);
@@ -804,7 +952,11 @@ printf("test.size() = %d\n", (int)test.size());
 			if(id == -2){
 				for(auto now : arg){
 					std::vector<Python3Parser::TestContext*> test = now->test();
-					auto fir = visit(test[0]);
+					auto dw = visit(test[0]);
+#ifdef DEBUG
+printf("print:dw got\n");
+#endif
+					auto fir = concretize(dw);
 					if(std::pair<int2048,int> *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
 #ifdef DEBUG
 printf("print:int2048\n");
@@ -841,10 +993,10 @@ printf("print:bool\n");
 					}
 				}
 				std::cout << '\n';
-				return std::make_pair(0, 0);
+				return std::make_pair(int2048(0), 0);
 			}
 			else if(id == -3){
-				auto fir = visit(arg[0]->test()[0]);
+				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
 					if(dt->second == 0){
 						return std::make_pair(dt->first,-1);
@@ -865,7 +1017,7 @@ printf("print:bool\n");
 				assert(false);
 			}
 			else if(id == -4){
-				auto fir = visit(arg[0]->test()[0]);
+				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
 					return std::make_pair(dt->first.toDouble(),-1);
 				}
@@ -881,7 +1033,7 @@ printf("print:bool\n");
 				assert(false);
 			}
 			else if(id == -5){
-				auto fir = visit(arg[0]->test()[0]);
+				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
 					return std::make_pair(dt->first.toString(),-1);
 				}
@@ -897,7 +1049,7 @@ printf("print:bool\n");
 				assert(false);
 			}
 			else{
-				auto fir = visit(arg[0]->test()[0]);
+				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
 					return std::make_pair(dt->first == 0 ? false : true,-1);
 				}
@@ -941,6 +1093,7 @@ printf("std::pair<std::string,int>\n");
 			return down;
 		}
 		assert(ctx->trailer() == nullptr);
+		//checkState(down, "visitAtom_expr");
 		return down;
 	}
 
@@ -964,15 +1117,31 @@ printf("funcId = %d\n", funcId[name]);
 				return std::make_pair(name, funcId[name]);
 			}
 			if(!valuePosition(name)){
+#ifdef DEBUG
+printf("new variable\n");
+#endif
 				assignValue(std::make_pair(std::any(false),variable_id),
-						std::make_pair(std::any(0),0));
+						std::make_pair(int2048(0),0));
+				variableId[name] = variable_id;
 				variable_id++;
 			}
+#ifdef DEBUG
+printf("maybe old variable\n");
+#endif
 			int pos = valuePosition(name);
+#ifdef DEBUG
+printf("variable value can be concretized\n");
+#endif
 			return std::make_pair(memory[depth][pos],pos);
 		}
 		if(auto now = ctx->NUMBER(); now){
+#ifdef DEBUG
+printf("number\n");
+#endif
 			std::string val = now->getText();
+#ifdef DEBUG
+std::cout << "val = " << val << '\n';
+#endif
 			if(val.find('.') != std::string::npos){
 				return std::make_pair(std::stod(val),-1);
 			}
@@ -991,7 +1160,10 @@ printf("string:"), std::cout << ret << '\n';
 			return std::make_pair(ret,-1);
 		}
 		if(auto now = ctx->NONE(); now){
-			return std::make_pair("None",0);
+#ifdef DEBUG
+printf("atom:none\n");
+#endif
+			return std::make_pair(int2048(0),0);
 		}
 		if(auto now = ctx->TRUE(); now){
 			return std::make_pair(true,-1);
@@ -1038,11 +1210,11 @@ printf("string:"), std::cout << ret << '\n';
 	}
 
 	virtual std::any visitTestlist(Python3Parser::TestlistContext *ctx) override {
-		std::vector<std::any> ret;
+		std::vector<std::pair<std::any,int>> ret;
 		auto test = ctx->test();
 		int nsi = test.size();
 		for(int i=0;i<nsi;i++){
-			ret.push_back(visit(test[i]));
+			ret.push_back(std::any_cast<std::pair<std::any,int>>(abstractize(visit(test[i]))));
 		}
 		return ret;
 	}
@@ -1058,3 +1230,12 @@ printf("string:"), std::cout << ret << '\n';
 
 //hello!
 #endif//PYTHON_INTERPRETER_EVALVISITOR_H
+/*
+cd /home/enovo/Python-Interpreter
+
+cd /home/enovo/Python-Interpreter/resources
+
+chmod +x visualize.bash
+
+bash visualize.bash file_input -gui
+*/
