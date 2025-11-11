@@ -423,12 +423,6 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return visit(ctx->or_test());
 	}
 
-	bool isTrue(std::any got){
-		got = unTie(got);
-		bool *ret = std::any_cast<bool>(&got);
-		return ret && *ret;
-	}
-
 	bool isFalse(std::any ret){
 		ret = unTie(ret);
 		int2048 *gint = std::any_cast<int2048>(&ret);
