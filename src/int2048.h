@@ -35,6 +35,8 @@ public:
   int2048(long long);
   int2048(const std::string &);
   int2048(const int2048 &);
+  double toDouble();
+  std::string toString();
 
   // 以下给定函数的形式参数类型仅供参考，可自行选择使用常量引用或者不使用引用
   // 如果需要，可以自行增加其他所需的函数
@@ -306,6 +308,56 @@ int2048::int2048(const int2048 &x){
     //    assert(false);
     //}
     return;
+}
+double int2048::toDouble(){
+    std::string str = toString();
+    int nsi = str.length();
+    double ret = 0;
+    for(int i=0;i<nsi;i++){
+        if(str[i] == '-'){
+            ret *= -1;
+        }
+        else{
+            ret = ret * 10 + str[i] - '0';
+        }
+    }
+    return ret;
+}
+std::string int2048::toString(){
+    std::string ret;
+    int2048 now = *this;
+    if(now.neg && now.pol.size() == 1 && now[0] == 0){
+        now.neg = false;
+        assert(false);
+    }
+    //if(now.pol.size() == 1 && now[0] == 0){
+    //    assert(false);
+    //}
+    std::ios::sync_with_stdio(false);
+    if(now.neg){
+        ret += '-';
+    }
+    assert(now.pol.back() || now.pol.size() == 1);
+    //if(now.pol.size() == 0){
+    //    std::cout << "shik\n";
+    //}
+    int size = now.pol.size();
+    for(int i=size-1;i>=0;i--){
+        int x = now.pol[i];
+        assert(x >= 0);
+        std::vector<int>out;
+        if(i == size - 1){
+            while(x){
+                out.push_back(x % 10), x /= 10;
+            }
+        }
+        else{
+            for(int j=0;j<=8;j++)out.push_back(x % 10), x /= 10;
+        }
+        //std::cout << "out.size() = " << out.size() << '\n';
+        for(int j=8;j>=0;j--)ret += out[j] + '0';
+    }
+    return ret;
 }
 void int2048::read(const std::string &str){
     *this = int2048(str);

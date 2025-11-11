@@ -5,6 +5,7 @@
 
 #include "Python3ParserBaseVisitor.h"
 #include "int2048.h"
+#include <iomanip>
 
 
 class EvalVisitor : public Python3ParserBaseVisitor {
@@ -17,21 +18,46 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return ctx->EOF();
 	}
 
+	const static int kMaxn = 1e4+5;
+	std::unordered_map<std::string,int>funcId;
+	std::unordered_map<int,std::any>memory[kMaxn];
+	std::unordered_map<int,bool>covered[kMaxn];
+	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
+	int depth;
+	int func_id = -7, variable_id = 1;
+
+	EvalVisitor(){
+		funcId["print"] = -2;
+		funcId["int"] = -3;
+		funcId["float"] = -4;
+		funcId["str"] = -5;
+		funcId["bool"] = -6;
+		return;
+	}
+
+	std::string removeQuotes(std::string str){
+		assert(str[0] == '\'' || str[0] == '\"');
+		return str.substr(1, str.length()-2);
+	}
+
 	virtual std::any visitFuncdef(Python3Parser::FuncdefContext *ctx) override {
+		funcId[removeQuotes(ctx->NAME()->getText())] = func_id;
+		function[func_id] = ctx;
+		func_id --;
 		return visitChildren(ctx);
 	}
 
 	virtual std::any visitParameters(Python3Parser::ParametersContext *ctx) override {
-		return visitChildren(ctx);
+		return visitChildren(ctx);//Do nothing, will be done in functionWork()
 	}
 
 	virtual std::any visitTypedargslist(Python3Parser::TypedargslistContext *ctx) override {
-		return visitChildren(ctx);
+		return visitChildren(ctx);//Do nothing, will be done in functionWork()
 	}
 
 	virtual std::any visitTfpdef(Python3Parser::TfpdefContext *ctx) override {
 		antlr4::tree::TerminalNode *name = ctx->NAME();
-		return name->toString();// Is this right?
+		return removeQuotes(name->getText());// Is this right?
 	}
 
 	virtual std::any visitStmt(Python3Parser::StmtContext *ctx) override {
@@ -61,7 +87,179 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		}
 	}
 
+	
+	std::any unTie(std::any gave){
+		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
+		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
+		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
+		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
+		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
+		if(gint){
+			return gint->first;
+		}
+		if(gdouble){
+			return gdouble->first;
+		}
+		if(gbool){
+			return gbool->first;
+		}
+		if(gstring){
+			return gstring->first;
+		}
+		if(gvector){
+			return gvector;
+		}
+		//assert(false);//maybe unavoidable
+		return gave;
+	}
+	
+	bool isString(std::any ret, const std::string &str){
+		ret = unTie(ret);
+		auto *dt = std::any_cast<std::string>(&ret);
+		return dt && *dt == str;
+	}
+
+	int valuePosition(std::string name){
+		for(auto now=memory[depth].begin();now!=memory[depth].end();now++){
+			if(isString(now->second, name)){
+				return now->first;
+			}
+		}
+		return 0;
+	}
+
+	void assignValue(std::pair<std::any,int> fir, std::pair<std::any,int> sec){
+		int id = fir.second;
+		for(int i=0;i<=depth;i++){
+			if(!covered[i][id]){
+				memory[i][id] = sec;
+			}
+		}
+		return;
+	}
+	
+	std::any addOrSub(std::any fir, std::any sec, std::string op){
+		fir = unTie(fir), sec = unTie(sec);
+		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
+		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
+		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
+		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		if(gint && sint){
+			int2048 fi = *gint, si = *sint;
+			if(op == "+"){
+				return fi + si;
+			}
+			if(op == "-"){
+				return fi - si;
+			}
+		}
+		if(gdouble && sdouble){
+			double fi = *gdouble, si = *sdouble;
+			if(op == "+"){
+				return fi + si;
+			}
+			if(op == "-"){
+				return fi - si;
+			}
+		}
+		if(gbool && sbool){
+			bool fi = *gbool, si = *sbool;
+			if(op == "+"){
+				return fi + si;
+			}
+			if(op == "-"){
+				return fi - si;
+			}
+		}
+		if(fstring && sstring){
+			assert(op == "+");
+			return *fstring + *sstring;
+		}
+		assert(false);
+		return false;
+	}
+	
+	std::any mulDivMod(std::any fir, std::any sec, std::string op){
+		fir = unTie(fir), sec = unTie(sec);
+		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
+		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
+		//auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec); // should not appear?
+		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		if(gint && sint){
+			int2048 fi = *gint, si = *sint;
+			if(op == "*"){
+				return fi * si;
+			}
+			if(op == "/" || op == "//"){
+				return fi / si;
+			}
+			if(op == "%"){
+				return fi % si;
+			}
+			assert(false);
+			return false;
+		}
+		if(gdouble && sdouble){
+			double fi = *gdouble, si = *sdouble;
+			if(op == "*"){
+				return fi * si;
+			}
+			if(op == "/"){
+				return fi / si;
+			}
+			assert(false);
+			return false;
+		}
+		if(fstring && sint){
+			assert(op == "*");
+			std::string ret = *fstring;
+			for(int i=1;i<*sint;i++){
+				ret += *fstring;
+			}
+			return ret;
+		}
+		assert(false);
+		return false;
+	}
+
 	virtual std::any visitExpr_stmt(Python3Parser::Expr_stmtContext *ctx) override {
+		std::vector<std::pair<std::any,int>>ret;
+		if(!ctx->ASSIGN().empty()){
+			auto testlist = ctx->testlist();
+			int nsi = testlist.size();
+			for(int i=nsi-1;i;i--){
+				auto fir = testlist[i-1]->test(), sec = testlist[i]->test();
+				int osi = fir.size();
+				for(int j=0;j<osi;j++){
+					std::any lef = visit(fir[j]), rig = visit(sec[j]);
+					assignValue(std::any_cast<std::pair<std::any,int>>(lef),
+								std::any_cast<std::pair<std::any,int>>(rig));
+					ret.push_back(std::any_cast<std::pair<std::any,int>>(rig));
+				}
+			}
+		}
+		else{
+			auto testlist = ctx->testlist();
+			auto aug = ctx->augassign();
+			int nsi = testlist.size();
+			auto fir = testlist[0]->test(), sec = testlist[1]->test();
+			int osi = fir.size();
+			std::any lef = visit(fir[0]), rig = visit(sec[0]);
+			std::string op = std::any_cast<std::pair<std::string,int>>(visit(aug)).first;
+			op.pop_back();
+			if(op == "+" || op == "-"){
+				assignValue(std::any_cast<std::pair<std::any,int>>(lef),
+							std::any_cast<std::pair<std::any,int>>(addOrSub(lef, rig, op)));
+				int id = std::any_cast<std::pair<std::any,int>>(lef).second;
+				ret.push_back(std::make_pair(memory[depth][id],id));
+			}
+			else{
+				assignValue(std::any_cast<std::pair<std::any,int>>(lef),
+							std::any_cast<std::pair<std::any,int>>(mulDivMod(lef, rig, op)));
+				int id = std::any_cast<std::pair<std::any,int>>(lef).second;
+				ret.push_back(std::make_pair(memory[depth][id],id));
+			}
+		}
 		return visitChildren(ctx);
 	}
 
@@ -136,30 +334,6 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return visit(def);
 	}
 
-	std::any unTie(std::any gave){
-		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
-		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
-		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
-		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
-		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
-		if(gint){
-			return gint->first;
-		}
-		if(gdouble){
-			return gdouble->first;
-		}
-		if(gbool){
-			return gbool->first;
-		}
-		if(gstring){
-			return gstring->first;
-		}
-		if(gvector){
-			return gvector;
-		}
-		//assert(false);//maybe unavoidable
-		return gave;
-	}
 	bool isTrue(std::any ret){
 		ret = unTie(ret);
 		int2048 *gint = std::any_cast<int2048>(&ret);
@@ -192,12 +366,6 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 			}
 		}
 		return std::make_pair("if nothing satisfied",-1);
-	}
-
-	bool isString(std::any ret, const std::string &str){
-		ret = unTie(ret);
-		auto *dt = std::any_cast<std::string>(&ret);
-		return dt && *dt == str;
 	}
 
 	bool isReturn(std::any gave){
@@ -418,47 +586,6 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return false;
 	}
 
-	std::any addOrSub(std::any fir, std::any sec, std::string op){
-		fir = unTie(fir), sec = unTie(sec);
-		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
-		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
-		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
-		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
-		if(gint && sint){
-			int2048 fi = *gint, si = *sint;
-			if(op == "+"){
-				return fi + si;
-			}
-			if(op == "-"){
-				return fi - si;
-			}
-		}
-		if(gdouble && sdouble){
-			double fi = *gdouble, si = *sdouble;
-			if(op == "+"){
-				return fi + si;
-			}
-			if(op == "-"){
-				return fi - si;
-			}
-		}
-		if(gbool && sbool){
-			bool fi = *gbool, si = *sbool;
-			if(op == "+"){
-				return fi + si;
-			}
-			if(op == "-"){
-				return fi - si;
-			}
-		}
-		if(fstring && sstring){
-			assert(op == "+");
-			return *fstring + *sstring;
-		}
-		assert(false);
-		return false;
-	}
-
 	virtual std::any visitArith_expr(Python3Parser::Arith_exprContext *ctx) override {
 		std::vector<Python3Parser::TermContext*> term = ctx->term();
 		std::vector<Python3Parser::Addorsub_opContext*> op = ctx->addorsub_op();
@@ -480,49 +607,6 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		}
 		assert(false);
 		return visitChildren(ctx);
-	}
-
-	std::any mulDivMod(std::any fir, std::any sec, std::string op){
-		fir = unTie(fir), sec = unTie(sec);
-		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
-		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
-		//auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec); // should not appear?
-		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
-		if(gint && sint){
-			int2048 fi = *gint, si = *sint;
-			if(op == "*"){
-				return fi * si;
-			}
-			if(op == "/" || op == "//"){
-				return fi / si;
-			}
-			if(op == "%"){
-				return fi % si;
-			}
-			assert(false);
-			return false;
-		}
-		if(gdouble && sdouble){
-			double fi = *gdouble, si = *sdouble;
-			if(op == "*"){
-				return fi * si;
-			}
-			if(op == "/"){
-				return fi / si;
-			}
-			assert(false);
-			return false;
-		}
-		if(fstring && sint){
-			assert(op == "*");
-			std::string ret = *fstring;
-			for(int i=1;i<*sint;i++){
-				ret += *fstring;
-			}
-			return ret;
-		}
-		assert(false);
-		return false;
 	}
 
 	virtual std::any visitTerm(Python3Parser::TermContext *ctx) override {
@@ -578,32 +662,316 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return visit(ctx->atom_expr());
 	}
 
+	std::any functionWork(Python3Parser::FuncdefContext *fun, Python3Parser::TrailerContext *tra){
+		auto argls = tra->arglist();
+		if(argls){
+			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
+			for(auto now : arg){
+				std::vector<Python3Parser::TestContext*> test = now->test();
+				if(test.size() != 1){
+					auto gfir = visit(test[0]), gsec = visit(test[1]);
+					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
+											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
+					assignValue(*fir, *sec);
+				}
+			}
+		}
+		depth++;
+		memory[depth] = memory[depth-1], covered[depth].clear();
+		auto targls = fun->parameters()->typedargslist();
+		if(targls){
+			auto var = targls->tfpdef();
+			auto test = targls->test();
+			auto argls = tra->arglist();
+			std::vector<Python3Parser::ArgumentContext*> arg;
+			if(argls){
+				arg = argls->argument();
+			}
+			for(int i=0;i<arg.size();i++){
+				std::string name = removeQuotes(var[0]->NAME()->getText());
+				if(!valuePosition(name)){
+					assignValue(std::make_pair(std::any(false),variable_id),
+							std::make_pair(std::any(0),0));
+					variable_id++;
+				}
+				int pos = valuePosition(name);
+				assignValue(std::make_pair(memory[depth][pos],pos), std::make_pair(visit(arg[i]->test()[0]),-1));
+				covered[depth][pos] = true;
+			}
+			assert(arg.size() + test.size() >= var.size());
+			for(int i=arg.size();i<var.size();i++){
+				std::string name = removeQuotes(var[i]->NAME()->getText());
+				if(!valuePosition(name)){
+					assignValue(std::make_pair(std::any(false),variable_id),
+							std::make_pair(std::any(0),0));
+					variable_id++;
+				}
+				int pos = valuePosition(name);
+				assignValue(std::make_pair(memory[depth][pos],pos),
+					std::make_pair(visit(test[test.size()-(var.size()-i)]),-1));
+				covered[depth][pos] = true;
+			}
+		}
+		std::any ret = visit(fun->suite());
+		depth--;
+		return ret;
+	}
+
+	std::string doubleToString(double v){
+		double down = 1;
+		int po = 0;
+		while(down < v){
+			down *= 10, po++;
+		}
+		while(down > v){
+			down /= 10, po--;
+		}
+		std::string ret;
+		if(po < 0){
+			ret += "0.", po++;
+			while(po < 0){
+				ret += '0', po++;
+			}
+		}
+		while(v){
+			int nv = v / po;
+			ret += nv + '0';
+			v -= po * nv, v *= 10;
+		}
+		return ret;
+	}
+
+	std::any insideFunction(int id, Python3Parser::TrailerContext *tra){
+		auto argls = tra->arglist();
+		if(!argls){
+			assert(id == -2);//only print can have no args?
+			std::cout << '\n';
+			return std::make_pair("insideFunction:Printed an empty arglist",-1);
+		}
+		else{
+			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
+			for(auto now : arg){
+				std::vector<Python3Parser::TestContext*> test = now->test();
+				if(test.size() != 1){
+					auto gfir = visit(test[0]), gsec = visit(test[1]);
+					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
+											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
+					assignValue(*fir, *sec);
+				}
+			}//because these five function all should have arguments
+			if(id == -2){
+				for(auto now : arg){
+					std::vector<Python3Parser::TestContext*> test = now->test();
+					auto gfir = visit(test[0]);
+					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir);
+					if(std::pair<int2048,int> *dt = std::any_cast<std::pair<int2048,int>*>(fir); dt){
+						if(dt->second == 0){
+							std::cout << "None" << ' ';
+						}
+						else{
+							std::cout << dt->first << ' ';
+						}
+					}
+					if(std::pair<double,int> *dt = std::any_cast<std::pair<double,int>*>(fir); dt){
+						std::cout << std::fixed << std::setprecision(6) << dt->first << ' ';
+					}
+					if(std::pair<std::string,int> *dt = std::any_cast<std::pair<std::string,int>*>(fir); dt){
+						std::cout << dt->first << ' ';
+					}
+					if(std::pair<bool,int> *dt = std::any_cast<std::pair<bool,int>*>(fir); dt){
+						if(dt->first){
+							std::cout << "True" << ' ';
+						}
+						else{
+							std::cout << "False" << ' ';
+						}
+					}
+				}
+				std::cout << '\n';
+			}
+			else if(id == -3){
+				auto fir = visit(arg[0]->test()[0]);
+				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+					if(dt->second == 0){
+						return std::make_pair(dt->first,-1);
+					}
+					else{
+						return *dt;
+					}
+				}
+				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
+					return std::make_pair((int2048)((long long)std::floor(dt->first)),-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
+					return std::make_pair((int2048)(dt->first),-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
+					return std::make_pair((int2048)(dt->first),-1);
+				}
+				assert(false);
+			}
+			else if(id == -4){
+				auto fir = visit(arg[0]->test()[0]);
+				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+					return std::make_pair(dt->first.toDouble(),-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
+					return *dt;
+				}
+				if(auto *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
+					return std::make_pair(std::stod(dt->first),-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
+					return std::make_pair((double)(dt->first ? 1 : 0),-1);
+				}
+				assert(false);
+			}
+			else if(id == -5){
+				auto fir = visit(arg[0]->test()[0]);
+				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+					return std::make_pair(dt->first.toString(),-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
+					return std::make_pair(doubleToString(dt->first),-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
+					return *dt;
+				}
+				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
+					return std::make_pair((std::string)(dt->first ? "True" : "False"),-1);//How?
+				}
+				assert(false);
+			}
+			else{
+				auto fir = visit(arg[0]->test()[0]);
+				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+					return std::make_pair(dt->first == 0 ? false : true,-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
+					return std::make_pair(dt->first == 0.0 ? false : true,-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
+					return std::make_pair(dt->first.empty() ? false : true,-1);
+				}
+				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
+					return *dt;
+				}
+				assert(false);
+			}
+		}
+		assert(false);
+		return false;
+	}
+
 	virtual std::any visitAtom_expr(Python3Parser::Atom_exprContext *ctx) override {
-		return visitChildren(ctx);
+		std::any down = visit(ctx->atom());
+		if(auto *val = std::any_cast<std::pair<std::string,int>>(&down); val){
+			if(val->second <= -7){
+				return functionWork(function[val->second], ctx->trailer());
+			}
+			if(val->second >= -6 && val->second <= -2){
+				return insideFunction(val->second, ctx->trailer());
+			}
+			return down;
+		}
+		assert(ctx->trailer() == nullptr);
+		return down;
 	}
 
 	virtual std::any visitTrailer(Python3Parser::TrailerContext *ctx) override {
-		return visitChildren(ctx);
+		return visitChildren(ctx);// I left it blank, for I will deal with it in functionWork().
 	}
 
 	virtual std::any visitAtom(Python3Parser::AtomContext *ctx) override {
+		if(auto now = ctx->NAME(); now){
+			std::string name = now->getText();
+			if(!valuePosition(name)){
+				assignValue(std::make_pair(std::any(false),variable_id),
+						std::make_pair(std::any(0),0));
+				variable_id++;
+			}
+			int pos = valuePosition(name);
+			return std::make_pair(memory[depth][pos],pos);
+		}
+		if(auto now = ctx->NUMBER(); now){
+			std::string val = now->getText();
+			if(val.find('.') != std::string::npos){
+				return std::make_pair(std::stod(val),-1);
+			}
+			else{
+				return std::make_pair(int2048(val),-1);
+			}
+		}
+		if(auto now = ctx->STRING(); !now.empty()){
+			std::string ret;
+			for(auto val : now){
+				ret += removeQuotes(val->getText());
+			}
+			return ret;
+		}
+		if(auto now = ctx->NONE(); now){
+			return std::make_pair("None",0);
+		}
+		if(auto now = ctx->TRUE(); now){
+			return std::make_pair(true,0);
+		}
+		if(auto now = ctx->FALSE(); now){
+			return std::make_pair(false,0);
+		}
+		if(auto now = ctx->test(); now){
+			return visit(now);
+		}
+		if(auto now = ctx->format_string(); now){
+			return visit(now);
+		}
+		assert(false);
 		return visitChildren(ctx);
 	}
 
 	virtual std::any visitFormat_string(Python3Parser::Format_stringContext *ctx) override {
+		auto fsl = ctx->FORMAT_STRING_LITERAL();
+		auto ob = ctx->OPEN_BRACE();
+		auto tl = ctx->testlist();
+		int nsi = fsl.size(), np = 0, osi = ob.size();
+		std::string ret;
+		for(int i=0;i<nsi;i++){
+			if(np != osi && fsl[i]->getSymbol()->getTokenIndex() > ob[i]->getSymbol()->getTokenIndex()){
+				std::any val = unTie(visit(tl[i]));
+				if(auto now = std::any_cast<std::string>(&val); now){
+					ret += *now;
+				}
+				if(auto now = std::any_cast<int2048>(&val); now){
+					ret += now->toString();
+				}
+				if(auto now = std::any_cast<double>(&val); now){
+					ret += doubleToString(*now);
+				}
+				if(auto now = std::any_cast<bool>(&val); now){
+					ret += (*now ? "True" : "False");
+				}
+				np++;
+			}
+			ret += removeQuotes(fsl[i]->getText());
+		}
 		return visitChildren(ctx);
 	}
 
 	virtual std::any visitTestlist(Python3Parser::TestlistContext *ctx) override {
-		return visitChildren(ctx);
+		std::vector<std::any> ret;
+		auto test = ctx->test();
+		int nsi = test.size();
+		for(int i=0;i<nsi;i++){
+			ret.push_back(visit(test[i]));
+		}
+		return ret;
 	}
 
 	virtual std::any visitArglist(Python3Parser::ArglistContext *ctx) override {
-		return visitChildren(ctx);
+		return visitChildren(ctx);// Same to trailer.
 	}
 
 	virtual std::any visitArgument(Python3Parser::ArgumentContext *ctx) override {
-		return visitChildren(ctx);
+		return visitChildren(ctx);// Will be considered above.
 	}
 };
 
