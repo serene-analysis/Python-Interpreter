@@ -633,7 +633,9 @@ std::istream &operator>>(std::istream &is, int2048 &now){
     return is;
 }
 std::ostream &operator<<(std::ostream &os, const int2048 &inow){
+    //std::cerr << "ostream int2048\n";
     int2048 now = inow;
+    //std::cerr << "now.pol.size() = " << now.pol.size() << '\n';;
     if(now.neg && now.pol.size() == 1 && now[0] == 0){
         now.neg = false;
         assert(false);
