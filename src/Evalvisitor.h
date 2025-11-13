@@ -20,7 +20,7 @@
 
 using sjtu::int2048;
 class EvalVisitor : public Python3ParserBaseVisitor {
-	const static int kMaxn = 1e4+5;
+	const static int kMaxn = 1e5+5;
 	std::unordered_map<std::string,int>funcId;
 	std::unordered_map<std::string,int>variableId;
 	std::unordered_map<int,std::any>memory[kMaxn];

@@ -20,8 +20,6 @@ public:
   int& operator[](int);
   void ntt(int, int, const int);
   int2048 mul(int2048, int2048, const int);
-  int2048 half();
-  int2048 more();
   friend int2048 lmove(int2048, int);
   friend int2048 rmove(int2048, int);
   friend int2048 div(int2048, int2048);

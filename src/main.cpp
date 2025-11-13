@@ -7,7 +7,8 @@ using namespace antlr4;
 // TODO: regenerating files in directory named "generated" is dangerous.
 //       if you really need to regenerate,please ask TA for help.
 int main(int argc, const char *argv[]) {
-	//auto mem = freopen("/home/enovo/Python-Interpreter/build/BigIntegerTest19.in","r",stdin);
+	//auto mem = freopen("/home/enovo/Python-Interpreter/build/BigIntegerTest1.in","r",stdin);
+	//freopen("/home/enovo/Python-Interpreter/build/mine.out","w",stdout);
 	//if(!mem){
 	//	std::cerr << "File open failed\n";
 	//	return 0;
