@@ -8,7 +8,7 @@ using namespace antlr4;
 //       if you really need to regenerate,please ask TA for help.
 int main(int argc, const char *argv[]) {
 	//std::cout << "???" << std::endl;
-	auto mem = freopen("/home/enovo/Python-Interpreter/build/mine.in","r",stdin);
+	//auto mem = freopen("/home/enovo/Python-Interpreter/build/mine.in","r",stdin);
 	//freopen("/home/enovo/Python-Interpreter/build/mine.out","w",stdout);
 	//if(!mem){
 	//	std::cerr << "File open failed\n";
