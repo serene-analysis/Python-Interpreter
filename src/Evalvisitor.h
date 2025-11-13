@@ -386,6 +386,14 @@ std::cout << "op = " << op << std::endl;
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		if(gbool){
+			int2048 nv(*gbool);
+			gint = &nv;
+		}
+		if(sbool){
+			int2048 nv(*sbool);
+			sint = &nv;
+		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "+"){
@@ -420,6 +428,28 @@ std::cout << "add, ans = " << fi + si << std::endl;
 			assert(op == "+");
 			return std::make_pair(*fstring + *sstring,-1);
 		}
+		if(gint){
+			int2048 lv = *gint;
+			if(sdouble){
+				if(op == "+"){
+					return std::make_pair(lv.toDouble() + *sdouble,-1);
+				}
+				else{
+					return std::make_pair(lv.toDouble() - *sdouble,-1);
+				}
+			}
+		}
+		if(gdouble){
+			double lv = *gdouble;
+			if(sint){
+				if(op == "+"){
+					return std::make_pair(lv + sint->toDouble(),-1);
+				}
+				else{
+					return std::make_pair(lv - sint->toDouble(),-1);
+				}
+			}
+		}
 		assert(false);
 		return false;
 	}
@@ -431,14 +461,25 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 		fir = unTie(fir, "mulDivMod"), sec = unTie(sec, "mulDivMod");
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
-		//auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec); // should not appear?
+		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		if(gbool){
+			int2048 nv(*gbool);
+			gint = &nv;
+		}
+		if(sbool){
+			int2048 nv(*sbool);
+			sint = &nv;
+		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "*"){
 				return std::make_pair(fi * si,-1);
 			}
-			if(op == "/" || op == "//"){
+			if(op == "/"){
+				return std::make_pair(double(fi.toDouble() / si.toDouble()),-1);
+			}
+			if(op == "//"){
 				return std::make_pair(fi / si,-1);
 			}
 			if(op == "%"){
@@ -455,6 +496,9 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 			if(op == "/"){
 				return std::make_pair(fi / si,-1);
 			}
+			if(op == "//"){
+				return std::make_pair(std::floor(fi / si),-1);
+			}
 			assert(false);
 			return false;
 		}
@@ -464,10 +508,41 @@ std::cout << "op = " << op << std::endl;
 #endif
 			assert(op == "*");
 			std::string ret = *fstring;
+			if(*sint == 0){
+				ret = std::string();
+			}
 			for(int i=1;i<*sint;i++){
 				ret += *fstring;
 			}
 			return std::make_pair(ret,-1);
+		}
+		if(gint){
+			int2048 lv = *gint;
+			if(sdouble){
+				if(op == "*"){
+					return std::make_pair(lv.toDouble() * *sdouble,-1);
+				}
+				else if(op == "/"){
+					return std::make_pair(lv.toDouble() / *sdouble,-1);
+				}
+				else if(op == "//"){
+					return std::make_pair(std::floor(lv.toDouble() / *sdouble),-1);
+				}
+			}
+		}
+		if(gdouble){
+			double lv = *gdouble;
+			if(sint){
+				if(op == "+"){
+					return std::make_pair(lv * sint->toDouble(),-1);
+				}
+				else if(op == "/"){
+					return std::make_pair(lv / sint->toDouble(),-1);
+				}
+				else{
+					return std::make_pair(std::floor(lv / sint->toDouble()),-1);
+				}
+			}
 		}
 		assert(false);
 		return false;
@@ -832,12 +907,83 @@ std::cout << "visitTest end" << std::endl;
 		}
 	}
 
-	bool compare(std::any fir, std::any sec, std::string op){
-		fir = unTie(fir, "compare"), sec = unTie(sec, "compare");
+	
+	std::any secondUnTie(std::any gave, std::string pos){
+#ifdef DEBUG
+std::cout << "unTie! pos = " << pos << std::endl;
+#endif
+		gave = concretize(gave);
+		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
+		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
+		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
+		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
+		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
+		if(gint){
+#ifdef DEBUG_untie
+std::cout << "unTie:int2048" << std::endl;
+#endif
+			return gint->second;
+		}
+		if(gdouble){
+#ifdef DEBUG_untie
+std::cout << "unTie:double" << std::endl;
+#endif
+			return gdouble->second;
+		}
+		if(gbool){
+#ifdef DEBUG_untie
+std::cout << "unTie:bool" << std::endl;
+#endif
+			return gbool->second;
+		}
+		if(gstring){
+#ifdef DEBUG_untie
+std::cout << "unTie:std::string" << std::endl;
+#endif
+			return gstring->second;
+		}
+		if(gvector){
+#ifdef DEBUG_untie
+std::cout << "unTie:vector" << std::endl;
+#endif
+			return (*gvector)[0].second;
+		}
+		assert(false);
+		return gave;
+	}
+
+	bool compare(std::any mfir, std::any msec, std::string op){
+		std::any fir = unTie(mfir, "compare"), sec = unTie(msec, "compare");
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *gstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		mfir = secondUnTie(mfir, "compare"), msec = secondUnTie(msec, "compare");
+		auto firnone = std::any_cast<int>(&mfir), secnone = std::any_cast<int>(&msec);
+		if(firnone && *firnone == 0){
+			if(op == "=="){
+				return secnone && *secnone == 0;
+			}
+			else{
+				return !secnone || secnone != 0;
+			}
+		}
+		if(secnone && *secnone == 0){
+			if(op == "=="){
+				return firnone && firnone == 0;
+			}
+			else{
+				return !firnone || firnone != 0;
+			}
+		}
+		if(gbool){
+			int2048 nv(*gbool);
+			gint = &nv;
+		}
+		if(sbool){
+			int2048 nv(*sbool);
+			sint = &nv;
+		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 //#ifdef DEBUG_comparison
@@ -882,28 +1028,6 @@ std::cout << "double,fi = " << fi << "\nsi = " << si << std::endl;
 			}
 			return fi != si;
 		}
-		if(gbool && sbool){
-			bool fi = *gbool, si = *sbool;
-#ifdef DEBUG_comparison
-std::cout << "bool,fi = " << fi << "\nsi = " << si << std::endl;
-#endif
-			if(op == "<"){
-				return fi < si;
-			}
-			if(op == "<="){
-				return fi <= si;
-			}
-			if(op == ">"){
-				return fi > si;
-			}
-			if(op == ">="){
-				return fi >= si;
-			}
-			if(op == "=="){
-				return fi == si;
-			}
-			return fi != si;
-		}
 		if(gstring && sstring){
 			std::string fi = *gstring, si = *sstring;
 #ifdef DEBUG_comparison
@@ -925,6 +1049,52 @@ std::cout << "std::string,fi = " << fi << "\nsi = " << si << std::endl;
 				return fi == si;
 			}
 			return fi != si;
+		}
+		if(gint){
+			int2048 lv = *gint;
+			if(sdouble){
+				if(op == "<"){
+					return (lv < (long long)(std::ceil(*sdouble)) - 1) || (lv.toDouble() < *sdouble);
+				}
+				if(op == "<="){
+					return (lv < (long long)(std::ceil(*sdouble)) - 1) || (lv.toDouble() <= *sdouble);
+				}
+				if(op == ">"){
+					return (lv > (long long)(std::ceil(*sdouble))) || (lv.toDouble() > *sdouble);
+				}
+				if(op == "<="){
+					return (lv > (long long)(std::ceil(*sdouble))) || (lv.toDouble() >= *sdouble);
+				}
+				if(op == "=="){
+					return (lv.toDouble() == *sdouble);
+				}
+				return (lv.toDouble() != *sdouble);
+			}
+		}
+		if(gdouble){
+			double lv = *gdouble;
+			if(sint){
+				std::swap(gint, sint), std::swap(gdouble, sdouble);
+				int2048 lv = *gint;
+				if(sdouble){
+					if(op == "<"){
+						return (lv < (long long)(std::ceil(*sdouble)) - 1) || (lv.toDouble() < *sdouble);
+					}
+					if(op == "<="){
+						return (lv < (long long)(std::ceil(*sdouble)) - 1) || (lv.toDouble() <= *sdouble);
+					}
+					if(op == ">"){
+						return (lv > (long long)(std::ceil(*sdouble))) || (lv.toDouble() > *sdouble);
+					}
+					if(op == "<="){
+						return (lv > (long long)(std::ceil(*sdouble))) || (lv.toDouble() >= *sdouble);
+					}
+					if(op == "=="){
+						return (lv.toDouble() == *sdouble);
+					}
+					return (lv.toDouble() != *sdouble);
+				}
+			}
 		}
 		assert(false);
 		return false;
