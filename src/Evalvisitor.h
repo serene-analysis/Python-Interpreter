@@ -283,7 +283,7 @@ std::cout << "isString : not even a string" << std::endl;
 	}
 
 	void assignValue(std::pair<std::any,int> fir, std::pair<std::any,int> sec){
-		concretize(sec);
+		//concretize(sec);
 		assert(fir.second >= 1);
 #ifdef DEBUG_assignValue
 std::cout << "assignValue, variable_id = " << fir.second << std::endl;
@@ -332,12 +332,12 @@ std::cout << "assign bool" << ", val = " << got4->first << std::endl;
 #ifdef DEBUG_assignValue
 std::cout << "covered = false" << std::endl;
 #endif
+			std::any gave = concretize(sec);
 			for(int i=0;i<=depth;i++){
 				if(i == 0 && depth != 0){
 					assert(memory[0].count(id));
 				}
 				if(!covered[i][id]){
-					std::any gave = concretize(sec);
 					std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
 					std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
 					std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
@@ -523,15 +523,15 @@ std::cout << "augassign = " << op[0] << std::endl;
 #endif
 			op.pop_back();
 			if(op == "+" || op == "-"){
-				assignValue(std::any_cast<std::pair<std::any,int>>(abstractize(lef)),
-							std::any_cast<std::pair<std::any,int>>(abstractize(addOrSub(lef, rig, op))));
-				int id = std::any_cast<std::pair<std::any,int>>(abstractize(lef)).second;
+				std::pair<std::any,int> lv = std::any_cast<std::pair<std::any,int>>(abstractize(lef));
+				assignValue(lv,std::any_cast<std::pair<std::any,int>>(abstractize(addOrSub(lef, rig, op))));
+				int id = lv.second;
 				ret.push_back(std::make_pair(memory[depth][id],id));
 			}
 			else{
-				assignValue(std::any_cast<std::pair<std::any,int>>(abstractize(lef)),
-							std::any_cast<std::pair<std::any,int>>(abstractize(mulDivMod(lef, rig, op))));
-				int id = std::any_cast<std::pair<std::any,int>>(abstractize(lef)).second;
+				std::pair<std::any,int> lv = std::any_cast<std::pair<std::any,int>>(abstractize(lef));
+				assignValue(lv,std::any_cast<std::pair<std::any,int>>(abstractize(mulDivMod(lef, rig, op))));
+				int id = lv.second;
 				ret.push_back(std::make_pair(memory[depth][id],id));
 			}
 			return ret;
@@ -1463,9 +1463,9 @@ std::cout << "new variable" << std::endl;
 #ifdef DEBUG_name
 std::cout << "variable value can be concretized" << std::endl;
 #endif
-			if(check){
-				unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
-			}
+			//if(check){
+			//	unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
+			//}
 			return std::make_pair(memory[depth][pos],pos);
 		}
 		if(auto now = ctx->NUMBER(); now){
