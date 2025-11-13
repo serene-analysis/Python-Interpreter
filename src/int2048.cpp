@@ -259,7 +259,7 @@ std::string int2048::toString(){
             for(int j=0;j<=8;j++)out.push_back(x % 10), x /= 10;
         }
         //std::cout << "out.size() = " << out.size() << '\n';
-        for(int j=8;j>=0;j--)ret += out[j] + '0';
+        for(int j=out.size()-1;j>=0;j--)ret += out[j] + '0';
     }
     return ret;
 }

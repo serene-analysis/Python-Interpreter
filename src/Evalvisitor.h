@@ -7,10 +7,15 @@
 #include "int2048.h"
 #include <iomanip>
 
-#define DEBUG
-#define DEBUG_name
-#define DEBUG_comparison
-#define DEBUG_untie
+//#define DEBUG
+//#define DEBUG_name
+//#define DEBUG_abstractize
+//#define DEBUG_concretize
+//#define DEBUG_assignValue
+//#define DEBUG_function_name
+//#define DEBUG_comparison
+//#define DEBUG_untie
+//#define DEBUG_format_string
 
 
 using sjtu::int2048;
@@ -53,120 +58,84 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return str.substr(1, str.length()-2);
 	}
 
-	virtual std::any visitFuncdef(Python3Parser::FuncdefContext *ctx) override {
-		funcId[ctx->NAME()->getText()] = func_id;
-		function[func_id] = ctx;
-		func_id --;
-		return std::make_pair(std::any(0),0);
-	}
-
-	virtual std::any visitParameters(Python3Parser::ParametersContext *ctx) override {
-		return visitChildren(ctx);//Do nothing, will be done in functionWork()
-	}
-
-	virtual std::any visitTypedargslist(Python3Parser::TypedargslistContext *ctx) override {
-		return visitChildren(ctx);//Do nothing, will be done in functionWork()
-	}
-
-	virtual std::any visitTfpdef(Python3Parser::TfpdefContext *ctx) override {
-		antlr4::tree::TerminalNode *name = ctx->NAME();
-		return name->getText();// Is this right?
-	}
-
-	virtual std::any visitStmt(Python3Parser::StmtContext *ctx) override {
-#ifdef DEBUG
-std::cout << "visitStmt" << std::endl;
-#endif
-		Python3Parser::Simple_stmtContext *simple = ctx->simple_stmt();
-		Python3Parser::Compound_stmtContext *compound = ctx->compound_stmt();
-		if(simple){
-			std::any ret = visit(simple);
-#ifdef DEBUG
-std::cout << "visitStmt end" << std::endl;
-#endif
-			return ret;
-		}
-		else{
-			std::any ret = visit(compound);
-#ifdef DEBUG
-std::cout << "visitStmt end" << std::endl;
-#endif
-			return ret;
-		}
-	}
-
-	virtual std::any visitSimple_stmt(Python3Parser::Simple_stmtContext *ctx) override {
-		Python3Parser::Small_stmtContext *small = ctx->small_stmt();
-		std::any ret = visit(small);
-#ifdef DEBUG
-std::cout << "visitSimpleStmt end" << std::endl;
-#endif
-		return ret;
-	}
-
-	virtual std::any visitSmall_stmt(Python3Parser::Small_stmtContext *ctx) override {
-		Python3Parser::Expr_stmtContext *expr = ctx->expr_stmt();
-		Python3Parser::Flow_stmtContext *flow = ctx->flow_stmt();
-		if(expr){
-			return visit(expr);
-		}
-		else{
-			return visit(flow);
-		}
-	}
-
+	
 	std::any abstractize(std::any gave){
 		std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
 		std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
 		std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
 		std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
 		std::pair<std::any,int> *got5 = std::any_cast<std::pair<std::any,int>>(&gave);
+		std::vector<std::pair<std::any,int>> *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
 		if(got){
+#ifdef DEBUG_abstractize
+std::cout << "abstractize : int2048" << std::endl;
+#endif
 			std::any nv = got->first;
 			return std::make_pair(nv,got->second);
 		}
 		if(got2){
+#ifdef DEBUG_abstractize
+std::cout << "abstractize : double" << std::endl;
+#endif
 			std::any nv = got2->first;
 			return std::make_pair(nv,got2->second);
 		}
 		if(got3){
+#ifdef DEBUG_abstractize
+std::cout << "abstractize : std::string" << std::endl;
+#endif
 			std::any nv = got3->first;
 			return std::make_pair(nv,got3->second);
 		}
 		if(got4){
+#ifdef DEBUG_abstractize
+std::cout << "abstractize : bool" << std::endl;
+#endif
 			std::any nv = got4->first;
 			return std::make_pair(nv,got4->second);
 		}
 		if(got5){
+#ifdef DEBUG_abstractize
+std::cout << "abstractize : any" << std::endl;
+#endif
 			return *got5;
 		}
-		assert(false);
-		return false;
+		assert(gvector && gvector->size() >= 1);
+#ifdef DEBUG_abstractize
+std::cout << "abstractize : gvector, size() = " << gvector->size() << std::endl;
+#endif
+		return (*gvector)[0];
 	}
 
 	std::any concretize(std::any gave){
+		gave = abstractize(gave);
 		std::pair<std::any,int> *must = std::any_cast<std::pair<std::any,int>>(&gave);
-		if(!must){
-			abstractize(gave);//Just to check the state
-			return gave;
-		}
-#ifdef DEBUG
-abstractize(gave);
-#endif
 		int2048 *got = std::any_cast<int2048>(&must->first);
 		double *got2 = std::any_cast<double>(&must->first);
 		std::string *got3 = std::any_cast<std::string>(&must->first);
 		bool *got4 = std::any_cast<bool>(&must->first);
 		if(got){
+#ifdef DEBUG_concretize
+std::cout << "concretize : int2048" << std::endl;
+#endif
 			return std::make_pair(*got,must->second);
 		}
 		if(got2){
+#ifdef DEBUG_concretize
+std::cout << "concretize : double" << std::endl;
+#endif
 			return std::make_pair(*got2,must->second);
 		}
 		if(got3){
+#ifdef DEBUG_concretize
+std::cout << "concretize : std::string" << std::endl;
+#endif
 			return std::make_pair(*got3,must->second);
 		}
 		if(got4){
+#ifdef DEBUG_concretize
+std::cout << "concretize : bool" << std::endl;
+#endif
 			return std::make_pair(*got4,must->second);
 		}
 		assert(false);
@@ -211,16 +180,89 @@ std::cout << "unTie:std::string" << std::endl;
 #ifdef DEBUG_untie
 std::cout << "unTie:vector" << std::endl;
 #endif
-			return gvector;
+			return (*gvector)[0].first;
 		}
 		assert(false);
 		return gave;
 	}
+
+	virtual std::any visitFuncdef(Python3Parser::FuncdefContext *ctx) override {
+		funcId[ctx->NAME()->getText()] = func_id;
+		function[func_id] = ctx;
+		func_id --;
+		return std::make_pair(std::any((int2048)(0)),0);
+	}
+
+	virtual std::any visitParameters(Python3Parser::ParametersContext *ctx) override {
+		return visitChildren(ctx);//Do nothing, will be done in functionWork()
+	}
+
+	virtual std::any visitTypedargslist(Python3Parser::TypedargslistContext *ctx) override {
+		return visitChildren(ctx);//Do nothing, will be done in functionWork()
+	}
+
+	virtual std::any visitTfpdef(Python3Parser::TfpdefContext *ctx) override {
+		antlr4::tree::TerminalNode *name = ctx->NAME();
+		return name->getText();// Is this right?
+	}
+
+	virtual std::any visitStmt(Python3Parser::StmtContext *ctx) override {
+#ifdef DEBUG
+std::cout << "visitStmt" << std::endl;
+#endif
+		Python3Parser::Simple_stmtContext *simple = ctx->simple_stmt();
+		Python3Parser::Compound_stmtContext *compound = ctx->compound_stmt();
+		if(simple){
+			std::any ret = visit(simple);
+#ifdef DEBUG
+std::cout << "visitStmt end" << std::endl;
+#endif
+			return ret;
+		}
+		else{
+			std::any ret = visit(compound);
+#ifdef DEBUG
+std::cout << "visitStmt end" << std::endl;
+#endif
+			return ret;
+		}
+	}
+
+	virtual std::any visitSimple_stmt(Python3Parser::Simple_stmtContext *ctx) override {
+		Python3Parser::Small_stmtContext *small = ctx->small_stmt();
+		std::any ret = visit(small);
+#ifdef DEBUG
+unTie(ret, "visitSimple_Stmt");
+abstractize(ret);
+std::cout << "visitSimpleStmt end" << std::endl;
+#endif
+		return ret;
+	}
+
+	virtual std::any visitSmall_stmt(Python3Parser::Small_stmtContext *ctx) override {
+		Python3Parser::Expr_stmtContext *expr = ctx->expr_stmt();
+		Python3Parser::Flow_stmtContext *flow = ctx->flow_stmt();
+		if(expr){
+			return visit(expr);
+		}
+		else{
+			std::any ret = visit(flow);
+#ifdef DEBUG
+std::cout << "visitSmallStmt : flow,end" << std::endl;
+#endif
+			return ret;
+		}
+	}
 	
 	bool isString(std::any ret, const std::string &str){
-		ret = unTie(ret, "isString");
+		ret = concretize(ret);
 		auto *dt = std::any_cast<std::pair<std::string,int>>(&ret);
-		return dt && dt->first == str;
+		if(!dt){
+#ifdef DEBUG
+std::cout << "isString : not even a string" << std::endl;
+#endif
+		}
+		return dt && dt->first == str && dt->second == 0; // Need it to be a flow manu
 	}
 
 	int valuePosition(std::string name){
@@ -241,48 +283,95 @@ std::cout << "unTie:vector" << std::endl;
 	}
 
 	void assignValue(std::pair<std::any,int> fir, std::pair<std::any,int> sec){
+		concretize(sec);
 		assert(fir.second >= 1);
-#ifdef DEBUG_name
+#ifdef DEBUG_assignValue
 std::cout << "assignValue, variable_id = " << fir.second << std::endl;
+std::cout << "depth = " << depth << std::endl;
 std::cout << findName(fir.second) << std::endl;
 #endif
 		int id = fir.second;
-		for(int i=0;i<=depth;i++){
-			if(!covered[i][id]){
-				std::any gave = concretize(sec);
-				std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
-				std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
-				std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
-				std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
-				if(got){
-#ifdef DEBUG_name
-std::cout << "assign int2048" << std::endl;
+		if(covered[depth][id]){
+#ifdef DEBUG_assignValue
+std::cout << "covered = true" << std::endl;
 #endif
-					memory[i][id] = got->first;
-				}
-				else if(got2){
-#ifdef DEBUG_name
-std::cout << "assign double" << std::endl;
+			std::any gave = concretize(sec);
+			std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
+			std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
+			std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
+			std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
+			if(got){
+#ifdef DEBUG_assignValue
+std::cout << "assign int2048" << ", val = " << got->first << std::endl;
 #endif
-					memory[i][id] = got2->first;
-				}
-				else if(got3){
-#ifdef DEBUG_name
-std::cout << "assign std::string" << std::endl;
+				memory[depth][id] = got->first;
+			}
+			else if(got2){
+#ifdef DEBUG_assignValue
+std::cout << "assign double" << ", val = " << got2->first << std::endl;
 #endif
-					memory[i][id] = got3->first;
-				}
-				else if(got4){
-#ifdef DEBUG_name
-std::cout << "assign bool" << std::endl;
+				memory[depth][id] = got2->first;
+			}
+			else if(got3){
+#ifdef DEBUG_assignValue
+std::cout << "assign std::string" << ", val = " << got3->first << std::endl;
 #endif
-					memory[i][id] = got4->first;
+				memory[depth][id] = got3->first;
+			}
+			else if(got4){
+#ifdef DEBUG_assignValue
+std::cout << "assign bool" << ", val = " << got4->first << std::endl;
+#endif
+				memory[depth][id] = got4->first;
+			}
+			else{
+				assert(false);
+			}
+		}
+		else{
+#ifdef DEBUG_assignValue
+std::cout << "covered = false" << std::endl;
+#endif
+			for(int i=0;i<=depth;i++){
+				if(i == 0 && depth != 0){
+					assert(memory[0].count(id));
 				}
-				else{
-					assert(false);
+				if(!covered[i][id]){
+					std::any gave = concretize(sec);
+					std::pair<int2048,int> *got = std::any_cast<std::pair<int2048,int>>(&gave);
+					std::pair<double,int> *got2 = std::any_cast<std::pair<double,int>>(&gave);
+					std::pair<std::string,int> *got3 = std::any_cast<std::pair<std::string,int>>(&gave);
+					std::pair<bool,int> *got4 = std::any_cast<std::pair<bool,int>>(&gave);
+					if(got){
+#ifdef DEBUG_assignValue
+std::cout << "assign int2048" << ", val = " << got->first << std::endl;
+#endif
+						memory[i][id] = got->first;
+					}
+					else if(got2){
+#ifdef DEBUG_assignValue
+std::cout << "assign double" << ", val = " << got2->first << std::endl;
+#endif
+						memory[i][id] = got2->first;
+					}
+					else if(got3){
+#ifdef DEBUG_assignValue
+std::cout << "assign std::string" << ", val = " << got3->first << std::endl;
+#endif
+						memory[i][id] = got3->first;
+					}
+					else if(got4){
+#ifdef DEBUG_assignValue
+std::cout << "assign bool" << ", val = " << got4->first << std::endl;
+#endif
+						memory[i][id] = got4->first;
+					}
+					else{
+						assert(false);
+					}
+					//std::pair<std::any,int> gave = std::any_cast<std::pair<std::any,int>>(abstractize(sec));
+					//memory[i][id] = gave.first;
 				}
-				//std::pair<std::any,int> gave = std::any_cast<std::pair<std::any,int>>(abstractize(sec));
-				//memory[i][id] = gave.first;
 			}
 		}
 		return;
@@ -300,6 +389,9 @@ std::cout << "op = " << op << std::endl;
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "+"){
+#ifdef DEBUG_function_name
+std::cout << "add, ans = " << fi + si << std::endl;
+#endif
 				return std::make_pair(fi + si,-1);
 			}
 			if(op == "-"){
@@ -333,6 +425,9 @@ std::cout << "op = " << op << std::endl;
 	}
 	
 	std::any mulDivMod(std::any fir, std::any sec, std::string op){
+#ifdef DEBUG
+std::cout << "mulDivMod : op = " << op << std::endl;
+#endif
 		fir = unTie(fir, "mulDivMod"), sec = unTie(sec, "mulDivMod");
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
@@ -379,7 +474,7 @@ std::cout << "op = " << op << std::endl;
 	}
 
 	virtual std::any visitExpr_stmt(Python3Parser::Expr_stmtContext *ctx) override {
-#ifdef DEBUG
+#ifdef DEBUG_function_name
 std::cout << "visitExprstmt" << std::endl;
 #endif
 		std::vector<std::pair<std::any,int>>ret,lmem;
@@ -406,6 +501,7 @@ std::cout << "testlist:" << i << "\ntest" << std::endl;
 					ret.push_back(*rigv);
 				}
 				for(int j=0;j<osi;j++){
+					//concretize(ret[j]);
 					assignValue(lmem[j],ret[j]);
 				}
 #ifdef DEBUG
@@ -422,7 +518,7 @@ std::cout << "testlist:" << i << "\nvalue assign end" << std::endl;
 			int osi = fir.size();
 			std::any lef = visit(fir[0]), rig = visit(sec[0]);
 			std::string op = std::any_cast<std::pair<std::string,int>>(visit(aug)).first;
-#ifdef DEBUG
+#ifdef DEBUG_function_name
 std::cout << "augassign = " << op[0] << std::endl;
 #endif
 			op.pop_back();
@@ -505,17 +601,18 @@ std::cout << "expr_stmt, single element end" << std::endl;
 		Python3Parser::TestlistContext *testlist = ctx->testlist();
 		if(testlist){
 			std::vector<std::pair<std::any,int>> ret, got = std::any_cast<std::vector<std::pair<std::any,int>>>(visit(testlist));
-			ret.push_back(std::make_pair(std::any(std::string("return")), -1));
+			ret.push_back(std::make_pair(std::any(std::string("return")), 0));
 			for(auto now : got){
 				ret.push_back(now);
 			}
 #ifdef DEBUG
+std::cout << "ReturnStmt : ret.size () = " << ret.size() << std::endl;
 std::cout << "ReturnStmt end" << std::endl;
 #endif
 			return ret;
 		}
 		else{
-			return std::vector<std::pair<std::any,int>>{std::make_pair(std::any(std::string("return")), -1), std::make_pair((std::any)(0), 0)};
+			return std::vector<std::pair<std::any,int>>{std::make_pair(std::any(std::string("return")), 0), std::make_pair((std::any)((int2048)(0)), 0)};
 		}
 	}
 
@@ -540,6 +637,7 @@ std::cout << "\nvisitCompoundStmt\n" << std::endl;
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
+		assert(gint || gdouble || gbool);
 		return (gint && *gint != 0) || (gdouble && *gdouble) || (gbool && *gbool);
 	}
 	
@@ -549,14 +647,20 @@ std::cout << "visitIf_stmt" << std::endl;
 #endif
 		Python3Parser::TestContext *fir = ctx->test(0);
 		if(isTrue(visit(fir))){
+#ifdef DEBUG
+std::cout << "\nvisitIf_stmt if condition satisfied\n" << std::endl;
+#endif
 			return visit(ctx->suite(0));
 		}
 		else{
+#ifdef DEBUG
+std::cout << "\nvisitIf_stmt if condition not satisfied\n" << std::endl;
+#endif
 			auto branch = ctx->test();
 			branch.assign(std::next(branch.begin()),branch.end());
-			if(ctx->ELSE()){
-				branch.pop_back();
-			}
+#ifdef DEBUG
+std::cout << "branch.size() = " << branch.size() << std::endl;
+#endif
 			int np = 1;
 			if(!branch.empty()){
 				for(auto now : branch){
@@ -567,6 +671,9 @@ std::cout << "visitIf_stmt" << std::endl;
 				}
 			}
 			if(ctx->ELSE()){
+#ifdef DEBUG
+std::cout << "\nvisitIf_stmt going into else\n" << std::endl;
+#endif
 				return visit(ctx->suite().back());
 			}
 		}
@@ -574,8 +681,14 @@ std::cout << "visitIf_stmt" << std::endl;
 	}
 
 	bool isReturn(std::any gave){
+#ifdef DEBUG
+std::cout << "isReturn?" << std::endl;
+#endif
 		std::vector<std::pair<std::any,int>> *got = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
 		if(got){
+#ifdef DEBUG
+std::cout << "isReturn, vector" << std::endl;
+#endif
 			auto ret = *got;
 			return isString(ret[0], "return");
 		}
@@ -583,25 +696,31 @@ std::cout << "visitIf_stmt" << std::endl;
 	}
 
 	virtual std::any visitWhile_stmt(Python3Parser::While_stmtContext *ctx) override {
-#ifdef DEBUG
+#ifdef DEBUG_function_name
 std::cout << "visitWhile_stmt" << std::endl;
 #endif
 		while(true){
+#ifdef DEBUG_function_name
+std::cout << "While_stmt going on" << std::endl;
+#endif
 			Python3Parser::TestContext *con = ctx->test();
 			std::any got = visit(con);
 			if(!isTrue(got)){
 				return std::make_pair(std::string("while condition unsatisfied"),-1);
 			}
 			std::any ret = visit(ctx->suite());
-			if(auto *ngot = std::any_cast<std::vector<std::pair<std::any,int>>>(&ret); ngot){
-				return *ngot;
-			}
 			if(isString(ret,"break")){
+#ifdef DEBUG_function_name
+std::cout << "while break" << std::endl;
+#endif
 				break;
 			}
-			//if(isReturn(ret)){
-			//	return ret;
-			//}
+			if(isReturn(ret)){
+#ifdef DEBUG_function_name
+std::cout << "while return" << std::endl;
+#endif
+				return ret;
+			}
 		}
 		return std::make_pair(std::string("while end"),-1);
 	}
@@ -612,25 +731,29 @@ std::cout << "visitSuite" << std::endl;
 #endif
 		Python3Parser::Simple_stmtContext *simple = ctx->simple_stmt();
 		if(simple){
-			return visit(simple);
+			std::any ret = visit(simple);
+#ifdef DEBUG
+std::cout << "visitSuite : simple, end" << std::endl;
+#endif
+			return ret;
 		}
 		else{
 			auto stmt = ctx->stmt();
 			for(Python3Parser::StmtContext *now : stmt){
 				std::any ret = visit(now);
-				if(auto *got = std::any_cast<std::vector<std::pair<std::any,int>>>(&ret); got){
-					return *got;
-				}
 				if(isString(ret, "continue")){
 					return std::make_pair(std::string("continue"),-1);
 				}
 				if(isString(ret, "break")){
 					return std::make_pair(std::string("break"),-1);
 				}
-				//if(isReturn(ret)){
-				//	return ret;
-				//}
+				if(isReturn(ret)){
+					return ret;
+				}
 			}
+#ifdef DEBUG
+std::cout << "visitSuite : unflowed, end" << std::endl;
+#endif
 			return std::make_pair(std::string("suite unflowed end"),-1);
 		}
 	}
@@ -1002,6 +1125,7 @@ unTie(nv, "visitTerm");
 
 	std::any functionWork(Python3Parser::FuncdefContext *fun, Python3Parser::TrailerContext *tra){
 		auto argls = tra->arglist();
+		std::vector<std::pair<std::any,int>>mem;
 		if(argls){
 			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
 			for(auto now : arg){
@@ -1011,11 +1135,15 @@ unTie(nv, "visitTerm");
 					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
 											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
 					assignValue(*fir, *sec);
+					mem.push_back(*sec);
+				}
+				else{
+					mem.push_back(std::any_cast<std::pair<std::any,int>>(abstractize(visit(test[0]))));
 				}
 			}
 		}
 		depth++;
-		memory[depth] = memory[depth-1], covered[depth].clear();
+		memory[depth] = memory[0], covered[depth].clear();
 		auto targls = fun->parameters()->typedargslist();
 		if(targls){
 			auto var = targls->tfpdef();
@@ -1025,40 +1153,42 @@ unTie(nv, "visitTerm");
 			if(argls){
 				arg = argls->argument();
 			}
+//#ifdef DEBUG_assignValue
+//std::cout << "arg.size() = " << arg.size() << std::endl;
+//#endif
 			for(int i=0;i<arg.size();i++){
-				std::string name = var[0]->NAME()->getText();
+				std::string name = var[i]->NAME()->getText();
 				if(!valuePosition(name)){
 					variableId[name] = variable_id;
+					covered[depth][variable_id] = true;
 					assignValue(std::make_pair(std::any(false),variable_id),
 							std::make_pair(int2048(0),0));
 					variable_id++;
 				}
 				int pos = valuePosition(name);
-				assignValue(std::make_pair(memory[depth][pos],pos), 
-							std::make_pair(std::any_cast<std::pair<std::any,int>>
-								(abstractize(visit(arg[i]->test()[0]))).first,-1));
 				covered[depth][pos] = true;
+				assignValue(std::make_pair(memory[depth][pos],pos), mem[i]);
 			}
 			assert(arg.size() + test.size() >= var.size());
 			for(int i=arg.size();i<var.size();i++){
 				std::string name = var[i]->NAME()->getText();
 				if(!valuePosition(name)){
 					variableId[name] = variable_id;
+					covered[depth][variable_id] = true;
 					assignValue(std::make_pair(std::any(false),variable_id),
 							std::make_pair(int2048(0),0));
 					variable_id++;
 				}
 				int pos = valuePosition(name);
+				covered[depth][pos] = true;
 				assignValue(std::make_pair(memory[depth][pos],pos), 
 							std::make_pair(std::any_cast<std::pair<std::any,int>>
 								(abstractize(visit(test[test.size()-(var.size()-i)]))).first,-1));
-				covered[depth][pos] = true;
 			}
 		}
 		std::any ret = visit(fun->suite());
 		if(isReturn(ret)){
-			std::any real = unTie(ret, "functionWork");
-			std::vector<std::pair<std::any,int>> *got = std::any_cast<std::vector<std::pair<std::any,int>>>(&real);
+			std::vector<std::pair<std::any,int>> *got = std::any_cast<std::vector<std::pair<std::any,int>>>(&ret);
 			if(got){
 				auto now = *got;
 				now.assign(std::next(now.begin()),now.end());
@@ -1068,6 +1198,9 @@ unTie(nv, "visitTerm");
 				assert(false);
 			}
 		}
+#ifdef DEBUG_name
+std::cout << "\nfunctionWork end\n" << std::endl;
+#endif
 		depth--;
 		return ret;
 	}
@@ -1089,9 +1222,12 @@ unTie(nv, "visitTerm");
 			}
 		}
 		while(v){
-			int nv = v / po;
+#ifdef DEBUG_format_string
+std::cout << "v = " << v << std::endl;
+#endif
+			int nv = v / down;
 			ret += nv + '0';
-			v -= po * nv, v *= 10;
+			v -= down * nv, v *= 10;
 		}
 		return ret;
 	}
@@ -1148,19 +1284,19 @@ std::cout << "print:None" << std::endl;
 //#endif
 						}
 					}
-					if(std::pair<double,int> *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
+					else if(std::pair<double,int> *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
 #ifdef DEBUG
 std::cout << "print:double" << std::endl;
 #endif
 						std::cout << std::fixed << std::setprecision(6) << dt->first << ' ';
 					}
-					if(std::pair<std::string,int> *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
+					else if(std::pair<std::string,int> *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
 #ifdef DEBUG
 std::cout << "print:string" << std::endl;
 #endif
 						std::cout << dt->first << ' ';
 					}
-					if(std::pair<bool,int> *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
+					else if(std::pair<bool,int> *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
 #ifdef DEBUG
 std::cout << "print:bool" << std::endl;
 #endif
@@ -1170,6 +1306,9 @@ std::cout << "print:bool" << std::endl;
 						else{
 							std::cout << "False" << ' ';
 						}
+					}
+					else{
+						assert(false);
 					}
 				}
 				std::cout << std::endl;
@@ -1292,6 +1431,7 @@ std::cout << "\nname:", std::cout << name << '\n' << std::endl;
 #endif
 			if(funcId.count(name)){
 #ifdef DEBUG_name
+std::cout << "func = " << name << std::endl;
 std::cout << "funcId = " << funcId[name] << std::endl;
 #endif
 				return std::make_pair(name, funcId[name]);
@@ -1301,18 +1441,31 @@ std::cout << "funcId = " << funcId[name] << std::endl;
 std::cout << "new variable" << std::endl;
 #endif
 				variableId[name] = variable_id;
+				if(depth){
+					covered[depth][variable_id] = true;
+				}
 				assignValue(std::make_pair(std::any(false),variable_id),
 						std::make_pair(int2048(0),0));
 				variable_id++;
 			}
 #ifdef DEBUG_name
-std::cout << "maybe old variable" << std::endl;
+//std::cout << "maybe old variable" << std::endl;
 #endif
 			int pos = valuePosition(name);
+			bool check = true;
+			if(depth && !memory[0].count(pos)){
+#ifdef DEBUG_name
+//std::cout << "variable announced before, but not globally, then covered = true" << std::endl;
+#endif
+				covered[depth][pos] = true;
+				check = false;
+			}
 #ifdef DEBUG_name
 std::cout << "variable value can be concretized" << std::endl;
 #endif
-			unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
+			if(check){
+				unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
+			}
 			return std::make_pair(memory[depth][pos],pos);
 		}
 		if(auto now = ctx->NUMBER(); now){
@@ -1367,26 +1520,70 @@ std::cout << "atom:none" << std::endl;
 		auto ob = ctx->OPEN_BRACE();
 		auto tl = ctx->testlist();
 		int nsi = fsl.size(), np = 0, osi = ob.size();
+#ifdef DEBUG_format_string
+std::cout << "testlist.size() = " << tl.size() << std::endl;
+#endif
 		std::string ret;
 		for(int i=0;i<nsi;i++){
-			if(np != osi && fsl[i]->getSymbol()->getTokenIndex() > ob[i]->getSymbol()->getTokenIndex()){
-				std::any val = unTie(visit(tl[i]), "visitFormat_string");
-				if(auto now = std::any_cast<std::string>(&val); now){
-					ret += *now;
+			while(np != osi && fsl[i]->getSymbol()->getTokenIndex() > ob[np]->getSymbol()->getTokenIndex()){
+#ifdef DEBUG_format_string
+std::cout << "add brace content" << std::endl;
+#endif
+				std::any val = concretize(visit(tl[np]));
+#ifdef DEBUG_format_string
+std::cout << "brace content gotten" << std::endl;
+#endif
+				if(auto now = std::any_cast<std::pair<std::string,int>>(&val); now){
+					ret += now->first;
 				}
-				if(auto now = std::any_cast<int2048>(&val); now){
-					ret += now->toString();
+				else if(auto now = std::any_cast<std::pair<int2048,int>>(&val); now){
+					ret += now->first.toString();
 				}
-				if(auto now = std::any_cast<double>(&val); now){
-					ret += doubleToString(*now);
+				else if(auto now = std::any_cast<std::pair<double,int>>(&val); now){
+					ret += doubleToString(now->first);
 				}
-				if(auto now = std::any_cast<bool>(&val); now){
-					ret += (*now ? "True" : "False");
+				else if(auto now = std::any_cast<std::pair<bool,int>>(&val); now){
+					ret += (now->first ? "True" : "False");
+				}
+				else{
+					assert(false);
 				}
 				np++;
 			}
-			ret += removeQuotes(fsl[i]->getText());
+#ifdef DEBUG_format_string
+std::cout << "add string literal" << std::endl;
+#endif
+			ret += fsl[i]->getText();
 		}
+		while(np != osi){
+#ifdef DEBUG_format_string
+std::cout << "add brace content" << std::endl;
+#endif
+			std::any val = concretize(visit(tl[np]));
+#ifdef DEBUG_format_string
+std::cout << "brace content gotten" << std::endl;
+std::cout << "np = " << np << std::endl;
+#endif
+			if(auto now = std::any_cast<std::pair<std::string,int>>(&val); now){
+				ret += now->first;
+			}
+			else if(auto now = std::any_cast<std::pair<int2048,int>>(&val); now){
+				ret += now->first.toString();
+			}
+			else if(auto now = std::any_cast<std::pair<double,int>>(&val); now){
+				ret += doubleToString(now->first);
+			}
+			else if(auto now = std::any_cast<std::pair<bool,int>>(&val); now){
+				ret += (now->first ? "True" : "False");
+			}
+			else{
+				assert(false);
+			}
+			np++;
+		}
+#ifdef DEBUG_format_string
+std::cout << "visiting format_string end" << std::endl;
+#endif
 		return std::make_pair(ret,-1);
 	}
 
@@ -1401,6 +1598,9 @@ unTie(got, "visitTestlist");
 #endif
 			ret.push_back(got);
 		}
+#ifdef DEBUG_format_string
+std::cout << "visitTestlist : ret.size() = " << ret.size() << std::endl;
+#endif
 		return ret;
 	}
 
@@ -1422,6 +1622,7 @@ cmake --build build
 
 ./build/code
 */
+
 /*
 cd /home/enovo/Python-Interpreter
 
