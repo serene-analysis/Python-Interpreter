@@ -26,7 +26,7 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	std::unordered_map<int,std::any>memory[kMaxn];
 	std::unordered_map<int,bool>covered[kMaxn];
 	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
-	int depth;
+	int depth = 0;
 	int func_id = -7, variable_id = 1;
 	// TODO: override all methods of Python3ParserBaseVisitor
 	virtual std::any visitFile_input(Python3Parser::File_inputContext *ctx) override {
