@@ -1112,7 +1112,6 @@ std::cout << "std::string,fi = " << fi << "\nsi = " << si << std::endl;
 				}
 			}
 		}
-		assert(false);
 		return false;
 	}
 

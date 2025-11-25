@@ -218,11 +218,13 @@ double int2048::toDouble(){
     int nsi = str.length();
     double ret = 0;
     for(int i=0;i<nsi;i++){
+        if(str[i] != '-'){
+            ret = ret * 10 + str[i] - '0';
+        }
+    }
+    for(int i=0;i<nsi;i++){
         if(str[i] == '-'){
             ret *= -1;
-        }
-        else{
-            ret = ret * 10 + str[i] - '0';
         }
     }
     return ret;
