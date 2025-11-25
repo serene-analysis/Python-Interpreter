@@ -517,6 +517,20 @@ std::cout << "op = " << op << std::endl;
 			}
 			return std::make_pair(ret,-1);
 		}
+		if(sstring && gint){
+#ifdef DEBUG
+std::cout << "op = " << op << std::endl;
+#endif
+			assert(op == "*");
+			std::string ret = *sstring;
+			if(*gint == 0){
+				ret = std::string();
+			}
+			for(int i=1;i<*gint;i++){
+				ret += *sstring;
+			}
+			return std::make_pair(ret,-1);
+		}
 		if(gint){
 			int2048 lv = *gint;
 			if(sdouble){
@@ -667,11 +681,11 @@ std::cout << "expr_stmt, single element end" << std::endl;
 	}
 
 	virtual std::any visitBreak_stmt(Python3Parser::Break_stmtContext *ctx) override {
-		return std::make_pair(std::string("break"),-1);
+		return std::make_pair(std::string("break"),0);
 	}
 
 	virtual std::any visitContinue_stmt(Python3Parser::Continue_stmtContext *ctx) override {
-		return std::make_pair(std::string("continue"),-1);
+		return std::make_pair(std::string("continue"),0);
 	}
 
 	virtual std::any visitReturn_stmt(Python3Parser::Return_stmtContext *ctx) override {
@@ -819,10 +833,10 @@ std::cout << "visitSuite : simple, end" << std::endl;
 			for(Python3Parser::StmtContext *now : stmt){
 				std::any ret = visit(now);
 				if(isString(ret, "continue")){
-					return std::make_pair(std::string("continue"),-1);
+					return std::make_pair(std::string("continue"),0);
 				}
 				if(isString(ret, "break")){
-					return std::make_pair(std::string("break"),-1);
+					return std::make_pair(std::string("break"),0);
 				}
 				if(isReturn(ret)){
 					return ret;
