@@ -1298,16 +1298,19 @@ unTie(nv, "visitTerm");
 	std::any functionWork(Python3Parser::FuncdefContext *fun, Python3Parser::TrailerContext *tra){
 		auto argls = tra->arglist();
 		std::vector<std::pair<std::any,int>>mem;
+		std::map<std::string,std::pair<std::any,int>>list;
 		if(argls){
 			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
 			for(auto now : arg){
 				std::vector<Python3Parser::TestContext*> test = now->test();
 				if(test.size() != 1){
+#ifdef DEBUG_function_name
+std::cout << "test.size() != 1" << std::endl;
+#endif
 					auto gfir = abstractize(visit(test[0])), gsec = abstractize(visit(test[1]));
 					std::pair<std::any,int> *fir = std::any_cast<std::pair<std::any,int>>(&gfir),
 											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
-					assignValue(*fir, *sec);
-					mem.push_back(*sec);
+					list[findName(fir->second)] = *sec;
 				}
 				else{
 					mem.push_back(std::any_cast<std::pair<std::any,int>>(abstractize(visit(test[0]))));
@@ -1316,12 +1319,15 @@ unTie(nv, "visitTerm");
 		}
 		depth++;
 		memory[depth] = memory[0], covered[depth].clear();
-#ifdef DEBUG_function_name
-		for(auto now : memory[depth]){
-			concretize(std::make_pair(now.second, -1));
-std::cout << "now.name = " << findName(now.first) << ", can be concretized" << std::endl;
-		}
-#endif
+//#ifdef DEBUG_function_name
+//		for(auto now : memory[depth]){
+//std::cout << "now.name = " << findName(now.first) << ", can be concretized" << std::endl;
+//			concretize(std::make_pair(now.second, -1));
+//		}
+//#endif
+/*
+Will lead to error!
+*/
 		auto targls = fun->parameters()->typedargslist();
 		if(targls){
 			auto var = targls->tfpdef();
@@ -1334,7 +1340,7 @@ std::cout << "now.name = " << findName(now.first) << ", can be concretized" << s
 //#ifdef DEBUG_assignValue
 //std::cout << "arg.size() = " << arg.size() << std::endl;
 //#endif
-			for(int i=0;i<arg.size();i++){
+			for(int i=0;i<mem.size();i++){
 				std::string name = var[i]->NAME()->getText();
 				if(!valuePosition(name)){
 					variableId[name] = variable_id;
@@ -1347,8 +1353,7 @@ std::cout << "now.name = " << findName(now.first) << ", can be concretized" << s
 				covered[depth][pos] = true;
 				assignValue(std::make_pair(memory[depth][pos],pos), mem[i]);
 			}
-			assert(arg.size() + test.size() >= var.size());
-			for(int i=arg.size();i<var.size();i++){
+			for(int i=mem.size();i<var.size();i++){
 				std::string name = var[i]->NAME()->getText();
 				if(!valuePosition(name)){
 					variableId[name] = variable_id;
@@ -1359,9 +1364,16 @@ std::cout << "now.name = " << findName(now.first) << ", can be concretized" << s
 				}
 				int pos = valuePosition(name);
 				covered[depth][pos] = true;
-				assignValue(std::make_pair(memory[depth][pos],pos), 
-							std::make_pair(std::any_cast<std::pair<std::any,int>>
-								(abstractize(visit(test[test.size()-(var.size()-i)]))).first,-1));
+				if(list.count(name)){
+					assignValue(std::make_pair(memory[depth][pos],pos), 
+								std::make_pair(std::any_cast<std::pair<std::any,int>>
+									(abstractize(list[name])).first,-1));
+				}
+				else{
+					assignValue(std::make_pair(memory[depth][pos],pos), 
+								std::make_pair(std::any_cast<std::pair<std::any,int>>
+									(abstractize(visit(test[test.size()-(var.size()-i)]))).first,-1));
+				}
 			}
 		}
 		std::any ret = visit(fun->suite());
@@ -1406,7 +1418,7 @@ std::cout << "\nfunctionWork end\n" << std::endl;
 #ifdef DEBUG
 std::cout << "arg.size() = " << (int)arg.size() << std::endl;
 #endif
-			for(auto now : arg){
+			/*for(auto now : arg){
 				std::vector<Python3Parser::TestContext*> test = now->test();
 #ifdef DEBUG
 std::cout << "test.size() = " << (int)test.size() << std::endl;
@@ -1417,7 +1429,7 @@ std::cout << "test.size() = " << (int)test.size() << std::endl;
 											*sec = std::any_cast<std::pair<std::any,int>>(&gsec);
 					assignValue(*fir, *sec);
 				}
-			}//because these five function all should have arguments
+			}//because these five function all should have arguments*/
 			if(id == -2){
 				for(auto now : arg){
 					std::vector<Python3Parser::TestContext*> test = now->test();
@@ -1628,9 +1640,9 @@ std::cout << "variable announced before, but not globally or globally but too la
 #ifdef DEBUG_name
 std::cout << "variable value can be concretized" << std::endl;
 #endif
-			if(memory[depth].count(pos)){
-				unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
-			}
+			//if(memory[depth].count(pos)){
+			//	unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
+			//}/*Will lead to error!*/
 			return std::make_pair(memory[depth][pos],pos);
 		}
 		if(auto now = ctx->NUMBER(); now){
