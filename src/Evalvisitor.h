@@ -1382,31 +1382,15 @@ std::cout << "\nfunctionWork end\n" << std::endl;
 		return ret;
 	}
 
-	std::string doubleToString(double v){
-		double down = 1;
-		int po = 0;
-		while(down < v){
-			down *= 10, po++;
+	std::string doubleToString(double value){
+		std::ostringstream oss;
+		oss << std::fixed << std::setprecision(6);
+		oss << value;
+		std::string result = oss.str();
+		if(result == "-0.000000"){
+			return "0.000000";
 		}
-		while(down > v){
-			down /= 10, po--;
-		}
-		std::string ret;
-		if(po < 0){
-			ret += "0.", po++;
-			while(po < 0){
-				ret += '0', po++;
-			}
-		}
-		while(v){
-#ifdef DEBUG_format_string
-std::cout << "v = " << v << std::endl;
-#endif
-			int nv = v / down;
-			ret += nv + '0';
-			v -= down * nv, v *= 10;
-		}
-		return ret;
+		return result;
 	}
 
 	std::any insideFunction(int id, Python3Parser::TrailerContext *tra){
@@ -1633,9 +1617,9 @@ std::cout << "maybe old variable" << std::endl;
 #endif
 			int pos = valuePosition(name);
 			bool check = true;
-			if(depth && (!memory[0].count(pos) || globalPosition[pos] < now->getSymbol()->getTokenIndex())){
+			if(depth && (!memory[0].count(pos) || globalPosition[pos] > now->getSymbol()->getTokenIndex())){
 #ifdef DEBUG_name
-std::cout << "variable announced before, but not globally or globally and early enough, then covered = true" << std::endl;
+std::cout << "variable announced before, but not globally or globally but too late, then covered = true" << std::endl;
 #endif
 				covered[depth][pos] = true;
 				//check = false;
@@ -1695,6 +1679,36 @@ std::cout << "atom:none" << std::endl;
 		return visitChildren(ctx);
 	}
 
+	std::string turnQuotes(std::string gave){
+		std::string ret;
+		bool isl = false, isr = false;
+		for(char now : gave){
+			if(now == '{'){
+				if(!isl){
+					isl = true;
+					ret += now;
+				}
+				else{
+					isl = isr = false;
+				}
+			}
+			else if(now == '}'){
+				if(!isr){
+					isr = true;
+					ret += now;
+				}
+				else{
+					isl = isr = false;
+				}
+			}
+			else{
+				ret += now;
+				isl = isr = false;
+			}
+		}
+		return ret;
+	}
+
 	virtual std::any visitFormat_string(Python3Parser::Format_stringContext *ctx) override {
 		auto fsl = ctx->FORMAT_STRING_LITERAL();
 		auto ob = ctx->OPEN_BRACE();
@@ -1733,7 +1747,7 @@ std::cout << "brace content gotten" << std::endl;
 #ifdef DEBUG_format_string
 std::cout << "add string literal" << std::endl;
 #endif
-			ret += fsl[i]->getText();
+			ret += turnQuotes(fsl[i]->getText());
 		}
 		while(np != osi){
 #ifdef DEBUG_format_string
