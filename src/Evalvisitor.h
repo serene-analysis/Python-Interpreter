@@ -582,12 +582,16 @@ std::cout << "assign" << std::endl;
 				for(auto now : sec){
 					std::any ngot = visit(now);
 					if(auto dt = std::any_cast<std::vector<std::pair<std::any,int>>>(&ngot); dt){
-						got = *dt;// simply do this
+						for(auto nv : *dt){
+							got.push_back(nv);
+						}// simply do this
 					}
 					else{
 						got.push_back(std::any_cast<std::pair<std::any,int>>(abstractize(ngot)));
 					}
 				}
+				//std::cout << "size = " << fir.size() << "," << got.size() << std::endl;
+				assert(fir.size() == got.size());
 #ifdef DEBUG_assign
 std::cout << "size = " << fir.size() << "," << sec.size() << std::endl;
 #endif
