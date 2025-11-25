@@ -549,21 +549,21 @@ std::cout << "op = " << op << std::endl;
 					return std::make_pair(lv.toDouble() / *sdouble,-1);
 				}
 				else if(op == "//"){
-					return std::make_pair(std::floor(lv.toDouble() / *sdouble),-1);
+					return std::make_pair(int2048((long long)(std::floor(lv.toDouble() / *sdouble))),-1);
 				}
 			}
 		}
 		if(gdouble){
 			double lv = *gdouble;
 			if(sint){
-				if(op == "+"){
+				if(op == "*"){
 					return std::make_pair(lv * sint->toDouble(),-1);
 				}
 				else if(op == "/"){
 					return std::make_pair(lv / sint->toDouble(),-1);
 				}
 				else{
-					return std::make_pair(std::floor(lv / sint->toDouble()),-1);
+					return std::make_pair(int2048((long long)(std::floor(lv / sint->toDouble()))),-1);
 				}
 			}
 		}
