@@ -1633,9 +1633,9 @@ std::cout << "maybe old variable" << std::endl;
 #endif
 			int pos = valuePosition(name);
 			bool check = true;
-			if(depth && !memory[0].count(pos) || globalPosition[pos] > now->getSymbol()->getTokenIndex()){
+			if(depth && (!memory[0].count(pos) || globalPosition[pos] < now->getSymbol()->getTokenIndex())){
 #ifdef DEBUG_name
-std::cout << "variable announced before, but not globally or globally but too late, then covered = true" << std::endl;
+std::cout << "variable announced before, but not globally or globally and early enough, then covered = true" << std::endl;
 #endif
 				covered[depth][pos] = true;
 				//check = false;
