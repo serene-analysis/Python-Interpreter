@@ -25,6 +25,7 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	std::unordered_map<std::string,int>variableId;
 	std::unordered_map<int,std::any>memory[kMaxn];
 	std::unordered_map<int,bool>covered[kMaxn];
+	std::unordered_map<int,int>globalPosition;
 	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
 	int depth = 0;
 	int func_id = -7, variable_id = 1;
@@ -143,7 +144,7 @@ std::cout << "concretize : bool" << std::endl;
 	}
 	
 	std::any unTie(std::any gave, std::string pos){
-#ifdef DEBUG
+#ifdef DEBUG_untie
 std::cout << "unTie! pos = " << pos << std::endl;
 #endif
 		gave = concretize(gave);
@@ -1314,6 +1315,12 @@ unTie(nv, "visitTerm");
 		}
 		depth++;
 		memory[depth] = memory[0], covered[depth].clear();
+#ifdef DEBUG_function_name
+		for(auto now : memory[depth]){
+			concretize(std::make_pair(now.second, -1));
+std::cout << "now.name = " << findName(now.first) << ", can be concretized" << std::endl;
+		}
+#endif
 		auto targls = fun->parameters()->typedargslist();
 		if(targls){
 			auto var = targls->tfpdef();
@@ -1614,28 +1621,31 @@ std::cout << "new variable" << std::endl;
 				if(depth){
 					covered[depth][variable_id] = true;
 				}
+				else{
+					globalPosition[variable_id] = now->getSymbol()->getTokenIndex();
+				}
 				assignValue(std::make_pair(std::any(false),variable_id),
 						std::make_pair(int2048(0),0));
 				variable_id++;
 			}
 #ifdef DEBUG_name
-//std::cout << "maybe old variable" << std::endl;
+std::cout << "maybe old variable" << std::endl;
 #endif
 			int pos = valuePosition(name);
 			bool check = true;
-			if(depth && !memory[0].count(pos)){
+			if(depth && !memory[0].count(pos) || globalPosition[pos] > now->getSymbol()->getTokenIndex()){
 #ifdef DEBUG_name
-//std::cout << "variable announced before, but not globally, then covered = true" << std::endl;
+std::cout << "variable announced before, but not globally or globally but too late, then covered = true" << std::endl;
 #endif
 				covered[depth][pos] = true;
-				check = false;
+				//check = false;
 			}
 #ifdef DEBUG_name
 std::cout << "variable value can be concretized" << std::endl;
 #endif
-			//if(check){
-			//	unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
-			//}
+			if(memory[depth].count(pos)){
+				unTie(std::make_pair(memory[depth][pos],pos), "visitAtom");
+			}
 			return std::make_pair(memory[depth][pos],pos);
 		}
 		if(auto now = ctx->NUMBER(); now){
