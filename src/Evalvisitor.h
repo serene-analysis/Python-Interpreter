@@ -389,19 +389,22 @@ std::cout << "op = " << op << std::endl;
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		int2048 fv, sv;
 		if(gbool){
-			int2048 nv(*gbool);
-			gint = &nv;
+			fv = int2048(*gbool);
+			gint = &fv;
+			//std::cout << "gbool turn to : " << *gint << std::endl;
 		}
 		if(sbool){
-			int2048 nv(*sbool);
-			sint = &nv;
+			sv = int2048(*sbool);
+			sint = &sv;
+			//std::cout << "sbool turn to : " << *sint << std::endl;
 		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "+"){
 #ifdef DEBUG_function_name
-std::cout << "add, ans = " << fi + si << std::endl;
+std::cout << "add, ans = " << fi << " + " << si << std::endl;
 #endif
 				return std::make_pair(fi + si,-1);
 			}
@@ -466,13 +469,16 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *fstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
+		int2048 fv, sv;
 		if(gbool){
-			int2048 nv(*gbool);
-			gint = &nv;
+			fv = int2048(*gbool);
+			gint = &fv;
+			//std::cout << "gbool turn to : " << *gint << std::endl;
 		}
 		if(sbool){
-			int2048 nv(*sbool);
-			sint = &nv;
+			sv = int2048(*sbool);
+			sint = &sv;
+			//std::cout << "sbool turn to : " << *sint << std::endl;
 		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
@@ -1011,13 +1017,16 @@ std::cout << "unTie:vector" << std::endl;
 				return !firnone || firnone != 0;
 			}
 		}
+		int2048 fv, sv;
 		if(gbool){
-			int2048 nv(*gbool);
-			gint = &nv;
+			fv = int2048(*gbool);
+			gint = &fv;
+			//std::cout << "gbool turn to : " << *gint << std::endl;
 		}
 		if(sbool){
-			int2048 nv(*sbool);
-			sint = &nv;
+			sv = int2048(*sbool);
+			sint = &sv;
+			//std::cout << "sbool turn to : " << *sint << std::endl;
 		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
@@ -1109,26 +1118,23 @@ std::cout << "std::string,fi = " << fi << "\nsi = " << si << std::endl;
 		if(gdouble){
 			double lv = *gdouble;
 			if(sint){
-				std::swap(gint, sint), std::swap(gdouble, sdouble);
-				int2048 lv = *gint;
-				if(sdouble){
-					if(op == "<"){
-						return (lv < (long long)(std::ceil(*sdouble)) - 1) || (lv.toDouble() < *sdouble);
-					}
-					if(op == "<="){
-						return (lv < (long long)(std::ceil(*sdouble)) - 1) || (lv.toDouble() <= *sdouble);
-					}
-					if(op == ">"){
-						return (lv > (long long)(std::ceil(*sdouble))) || (lv.toDouble() > *sdouble);
-					}
-					if(op == "<="){
-						return (lv > (long long)(std::ceil(*sdouble))) || (lv.toDouble() >= *sdouble);
-					}
-					if(op == "=="){
-						return (lv.toDouble() == *sdouble);
-					}
-					return (lv.toDouble() != *sdouble);
+				int2048 rv = *sint;
+				if(op == "<"){
+					return ((long long)(std::ceil(lv)) - 1) < rv || lv < rv.toDouble();
 				}
+				if(op == "<="){
+					return ((long long)(std::ceil(lv)) - 1) < rv || lv <= rv.toDouble();
+				}
+				if(op == ">"){
+					return ((long long)(std::ceil(lv)) - 1) > rv || lv > rv.toDouble();
+				}
+				if(op == "<="){
+					return ((long long)(std::ceil(lv)) - 1) < rv || lv >= rv.toDouble();
+				}
+				if(op == "=="){
+					return (lv == rv.toDouble());
+				}
+				return (lv != rv.toDouble());
 			}
 		}
 		return false;
