@@ -15,6 +15,8 @@
 //#define DEBUG_function_name
 //#define DEBUG_comparison
 //#define DEBUG_untie
+//#define DEBUG_testlist
+//#define DEBUG_assign
 //#define DEBUG_format_string
 
 
@@ -569,20 +571,33 @@ std::cout << "visitExprstmt" << std::endl;
 #endif
 		std::vector<std::pair<std::any,int>>ret,lmem;
 		if(!ctx->ASSIGN().empty()){
-#ifdef DEBUG
+#ifdef DEBUG_assign
 std::cout << "assign" << std::endl;
 #endif
 			auto testlist = ctx->testlist();
 			int nsi = testlist.size();
 			for(int i=nsi-1;i;i--){
 				auto fir = testlist[i-1]->test(), sec = testlist[i]->test();
+				std::vector<std::pair<std::any,int>> got;
+				for(auto now : sec){
+					std::any ngot = visit(now);
+					if(auto dt = std::any_cast<std::vector<std::pair<std::any,int>>>(&ngot); dt){
+						got = *dt;// simply do this
+					}
+					else{
+						got.push_back(std::any_cast<std::pair<std::any,int>>(abstractize(ngot)));
+					}
+				}
+#ifdef DEBUG_assign
+std::cout << "size = " << fir.size() << "," << sec.size() << std::endl;
+#endif
 				int osi = fir.size();
 				lmem.clear(), ret.clear();
 				for(int j=0;j<osi;j++){
-#ifdef DEBUG
-std::cout << "testlist:" << i << "\ntest" << std::endl;
+#ifdef DEBUG_assign
+std::cout << "testlist:" << i << " " << j << "\ntest" << std::endl;
 #endif
-					std::any lef = abstractize(visit(fir[j])), rig = abstractize(visit(sec[j]));
+					std::any lef = abstractize(visit(fir[j])), rig = got[j];
 					std::pair<std::any,int> *lefv = std::any_cast<std::pair<std::any,int>>(&lef),
 											*rigv = std::any_cast<std::pair<std::any,int>>(&rig);
 					if(!lefv || !rigv){
@@ -595,7 +610,7 @@ std::cout << "testlist:" << i << "\ntest" << std::endl;
 					//concretize(ret[j]);
 					assignValue(lmem[j],ret[j]);
 				}
-#ifdef DEBUG
+#ifdef DEBUG_assign
 std::cout << "testlist:" << i << "\nvalue assign end" << std::endl;
 #endif
 			}
@@ -1813,12 +1828,12 @@ std::cout << "visiting format_string end" << std::endl;
 		int nsi = test.size();
 		for(int i=0;i<nsi;i++){
 			std::pair<std::any,int> got = std::any_cast<std::pair<std::any,int>>(abstractize(visit(test[i])));
-#ifdef DEBUG
-unTie(got, "visitTestlist");
+#ifdef DEBUG_testlist
+std::cout << "visittestlist : " << i << std::endl;
 #endif
 			ret.push_back(got);
 		}
-#ifdef DEBUG_format_string
+#ifdef DEBUG_testlist
 std::cout << "visitTestlist : ret.size() = " << ret.size() << std::endl;
 #endif
 		return ret;
