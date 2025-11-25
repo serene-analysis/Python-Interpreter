@@ -753,8 +753,9 @@ std::cout << "\nvisitCompoundStmt\n" << std::endl;
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
-		assert(gint || gdouble || gbool);
-		return (gint && *gint != 0) || (gdouble && *gdouble) || (gbool && *gbool);
+		auto *gstring = std::any_cast<std::string>(&ret);
+		assert(gint || gdouble || gbool || gstring);
+		return (gint && *gint != 0) || (gdouble && *gdouble) || (gbool && *gbool) || (gstring && !gstring->empty());
 	}
 	
 	virtual std::any visitIf_stmt(Python3Parser::If_stmtContext *ctx) override {
@@ -891,7 +892,9 @@ std::cout << "visitTest end" << std::endl;
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
-		return (gint && *gint == 0) || (gdouble && !*gdouble) || (gbool && !*gbool);
+		auto *gstring = std::any_cast<std::string>(&ret);
+		assert(gint || gdouble || gbool || gstring);
+		return (gint && *gint == 0) || (gdouble && !*gdouble) || (gbool && !*gbool) || (gstring && gstring->empty());
 	}
 
 	virtual std::any visitOr_test(Python3Parser::Or_testContext *ctx) override {
