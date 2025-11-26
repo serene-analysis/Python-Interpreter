@@ -239,7 +239,7 @@ std::cout << "unTie:vector" << std::endl;
 		funcId[ctx->NAME()->getText()] = func_id;
 		function[func_id] = ctx;
 		func_id --;
-		return std::make_pair(std::any((int2048)(0)),0);
+		return std::make_pair(std::any((int2048)(magic)),0);
 	}
 
 	virtual std::any visitParameters(Python3Parser::ParametersContext *ctx) override {
@@ -774,7 +774,7 @@ std::cout << "ReturnStmt end" << std::endl;
 			return ret;
 		}
 		else{
-			return std::vector<std::pair<std::any,int>>{std::make_pair(std::any(std::string("return")), 0), std::make_pair((std::any)((int2048)(0)), 0)};
+			return std::vector<std::pair<std::any,int>>{std::make_pair(std::any(std::string("return")), 0), std::make_pair((std::any)((int2048)(magic)), 0)};
 		}
 	}
 
@@ -801,7 +801,7 @@ std::cout << "\nvisitCompoundStmt\n" << std::endl;
 		auto *gbool = std::any_cast<bool>(&ret);
 		auto *gstring = std::any_cast<std::string>(&ret);
 		assert(gint || gdouble || gbool || gstring);
-		return (gint && *gint != 0) || (gdouble && *gdouble) || (gbool && *gbool) || (gstring && !gstring->empty());
+		return (gint && (*gint != 0 && *gint != magic)) || (gdouble && *gdouble) || (gbool && *gbool) || (gstring && !gstring->empty());
 	}
 	
 	virtual std::any visitIf_stmt(Python3Parser::If_stmtContext *ctx) override {
@@ -940,7 +940,7 @@ std::cout << "visitTest end" << std::endl;
 		auto *gbool = std::any_cast<bool>(&ret);
 		auto *gstring = std::any_cast<std::string>(&ret);
 		assert(gint || gdouble || gbool || gstring);
-		return (gint && *gint == 0) || (gdouble && !*gdouble) || (gbool && !*gbool) || (gstring && gstring->empty());
+		return (gint && (*gint == 0 || *gint == magic)) || (gdouble && !*gdouble) || (gbool && !*gbool) || (gstring && gstring->empty());
 	}
 
 	virtual std::any visitOr_test(Python3Parser::Or_testContext *ctx) override {
@@ -1387,7 +1387,7 @@ Will lead to error!
 					variableId[name] = variable_id;
 					covered[depth][variable_id] = true;
 					assignValue(std::make_pair(std::any(false),variable_id),
-							std::make_pair(int2048(0),0));
+							std::make_pair(int2048(magic),0));
 					variable_id++;
 				}
 				int pos = valuePosition(name);
@@ -1530,7 +1530,7 @@ std::cout << "print:bool" << std::endl;
 			else if(id == -3){
 				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
-					if(dt->second == 0){
+					if(dt->first == magic){
 						return std::make_pair(dt->first,-1);
 					}
 					else{
