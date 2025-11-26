@@ -22,6 +22,7 @@
 
 using sjtu::int2048;
 class EvalVisitor : public Python3ParserBaseVisitor {
+	const static long long magic = 1152921502459363329;
 	const static int kMaxn = 2e4+5;
 	std::unordered_map<std::string,int>funcId;
 	std::unordered_map<std::string,int>variableId;
@@ -184,6 +185,51 @@ std::cout << "unTie:std::string" << std::endl;
 std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].first;
+		}
+		assert(false);
+		return gave;
+	}
+
+	
+	std::any secondUnTie(std::any gave, std::string pos){
+#ifdef DEBUG
+std::cout << "unTie! pos = " << pos << std::endl;
+#endif
+		gave = concretize(gave);
+		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
+		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
+		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
+		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
+		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
+		if(gint){
+#ifdef DEBUG_untie
+std::cout << "unTie:int2048" << std::endl;
+#endif
+			return gint->second;
+		}
+		if(gdouble){
+#ifdef DEBUG_untie
+std::cout << "unTie:double" << std::endl;
+#endif
+			return gdouble->second;
+		}
+		if(gbool){
+#ifdef DEBUG_untie
+std::cout << "unTie:bool" << std::endl;
+#endif
+			return gbool->second;
+		}
+		if(gstring){
+#ifdef DEBUG_untie
+std::cout << "unTie:std::string" << std::endl;
+#endif
+			return gstring->second;
+		}
+		if(gvector){
+#ifdef DEBUG_untie
+std::cout << "unTie:vector" << std::endl;
+#endif
+			return (*gvector)[0].second;
 		}
 		assert(false);
 		return gave;
@@ -951,73 +997,27 @@ std::cout << "visitTest end" << std::endl;
 		}
 	}
 
-	
-	std::any secondUnTie(std::any gave, std::string pos){
-#ifdef DEBUG
-std::cout << "unTie! pos = " << pos << std::endl;
-#endif
-		gave = concretize(gave);
-		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
-		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
-		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
-		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
-		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
-		if(gint){
-#ifdef DEBUG_untie
-std::cout << "unTie:int2048" << std::endl;
-#endif
-			return gint->second;
-		}
-		if(gdouble){
-#ifdef DEBUG_untie
-std::cout << "unTie:double" << std::endl;
-#endif
-			return gdouble->second;
-		}
-		if(gbool){
-#ifdef DEBUG_untie
-std::cout << "unTie:bool" << std::endl;
-#endif
-			return gbool->second;
-		}
-		if(gstring){
-#ifdef DEBUG_untie
-std::cout << "unTie:std::string" << std::endl;
-#endif
-			return gstring->second;
-		}
-		if(gvector){
-#ifdef DEBUG_untie
-std::cout << "unTie:vector" << std::endl;
-#endif
-			return (*gvector)[0].second;
-		}
-		assert(false);
-		return gave;
-	}
-
 	bool compare(std::any mfir, std::any msec, std::string op){
 		std::any fir = unTie(mfir, "compare"), sec = unTie(msec, "compare");
 		int2048 *gint = std::any_cast<int2048>(&fir), *sint = std::any_cast<int2048>(&sec);
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *gstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
-		mfir = secondUnTie(mfir, "compare"), msec = secondUnTie(msec, "compare");
-		auto firnone = std::any_cast<int>(&mfir), secnone = std::any_cast<int>(&msec);
-		if(firnone && *firnone == 0){
+		auto firnone = std::any_cast<int>(&fir), secnone = std::any_cast<int>(&sec);
+		if(firnone && *firnone == magic){
 			if(op == "=="){
-				return secnone && *secnone == 0;
+				return secnone && *secnone == magic;
 			}
 			else{
-				return !secnone || secnone != 0;
+				return !secnone || *secnone != magic;
 			}
 		}
-		if(secnone && *secnone == 0){
+		if(secnone && *secnone == magic){
 			if(op == "=="){
-				return firnone && firnone == 0;
+				return firnone && *firnone == magic;
 			}
 			else{
-				return !firnone || firnone != 0;
+				return !firnone || *firnone != magic;
 			}
 		}
 		int2048 fv, sv;
@@ -1400,20 +1400,18 @@ Will lead to error!
 					variableId[name] = variable_id;
 					covered[depth][variable_id] = true;
 					assignValue(std::make_pair(std::any(false),variable_id),
-							std::make_pair(int2048(0),0));
+							std::make_pair(int2048(magic),0));
 					variable_id++;
 				}
 				int pos = valuePosition(name);
 				covered[depth][pos] = true;
 				if(list.count(name)){
 					assignValue(std::make_pair(memory[depth][pos],pos), 
-								std::make_pair(std::any_cast<std::pair<std::any,int>>
-									(abstractize(list[name])).first,-1));
+								std::any_cast<std::pair<std::any,int>>(abstractize(list[name])));
 				}
 				else{
 					assignValue(std::make_pair(memory[depth][pos],pos), 
-								std::make_pair(std::any_cast<std::pair<std::any,int>>
-									(abstractize(visit(test[test.size()-(var.size()-i)]))).first,-1));
+								std::any_cast<std::pair<std::any,int>>(abstractize(visit(test[test.size()-(var.size()-i)]))));
 				}
 			}
 		}
@@ -1483,7 +1481,7 @@ std::cout << "print:dw got" << std::endl;
 //#ifdef DEBUG
 //std::cout << "print:int2048" << std::endl;
 //#endif
-						if(dt->second == 0){
+						if(dt->first == magic){
 #ifdef DEBUG
 std::cout << "print:None" << std::endl;
 #endif
@@ -1527,7 +1525,7 @@ std::cout << "print:bool" << std::endl;
 					}
 				}
 				std::cout << std::endl;
-				return std::make_pair(int2048(0), 0);
+				return std::make_pair(int2048(magic), 0);
 			}
 			else if(id == -3){
 				auto fir = concretize(visit(arg[0]->test()[0]));
@@ -1663,7 +1661,7 @@ std::cout << "new variable" << std::endl;
 					globalPosition[variable_id] = now->getSymbol()->getTokenIndex();
 				}
 				assignValue(std::make_pair(std::any(false),variable_id),
-						std::make_pair(int2048(0),0));
+						std::make_pair(int2048(magic),0));
 				variable_id++;
 			}
 #ifdef DEBUG_name
@@ -1715,7 +1713,7 @@ std::cout << "string:", std::cout << ret << std::endl;
 #ifdef DEBUG
 std::cout << "atom:none" << std::endl;
 #endif
-			return std::make_pair(int2048(0),0);
+			return std::make_pair(int2048(magic),0);
 		}
 		if(auto now = ctx->TRUE(); now){
 			return std::make_pair(true,-1);
