@@ -1003,7 +1003,7 @@ std::cout << "visitTest end" << std::endl;
 		auto *gdouble = std::any_cast<double>(&fir), *sdouble = std::any_cast<double>(&sec);
 		auto *gbool = std::any_cast<bool>(&fir), *sbool = std::any_cast<bool>(&sec);
 		auto *gstring = std::any_cast<std::string>(&fir), *sstring = std::any_cast<std::string>(&sec);
-		auto firnone = std::any_cast<int>(&fir), secnone = std::any_cast<int>(&sec);
+		auto firnone = std::any_cast<int2048>(&fir), secnone = std::any_cast<int2048>(&sec);
 		if(firnone && *firnone == magic){
 			if(op == "=="){
 				return secnone && *secnone == magic;
