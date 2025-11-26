@@ -22,7 +22,7 @@
 
 using sjtu::int2048;
 class EvalVisitor : public Python3ParserBaseVisitor {
-	const static long long magic = 1152921502459363329;
+	const static long long magic = 11529215024593633;
 	const static int kMaxn = 2e4+5;
 	std::unordered_map<std::string,int>funcId;
 	std::unordered_map<std::string,int>variableId;
