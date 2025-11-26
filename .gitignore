@@ -5,6 +5,7 @@ build/
 gen/
 antlr-playground/.antlr
 resources/.antlr
+src/main.cpp
 # Testcases
 testcases/hidden-testcases
 2921
