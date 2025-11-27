@@ -57,9 +57,47 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 		return ctx->EOF();
 	}
 
+	std::string transform(std::string str){
+		std::string ret;
+		bool is = false;
+		for(char now : str){
+			if(now == '\\'){
+				if(is){
+					ret += '\\';
+					is = false;
+				}
+				else{
+					is = true;
+				}
+			}
+			else if(now == 'n'){
+				if(is){
+					ret += '\n';
+					is = false;
+				}
+				else{
+					ret += 'n';
+				}
+			}
+			else if(now == 't'){
+				if(is){
+					ret += '\t';
+					is = false;
+				}
+				else{
+					ret += 't';
+				}
+			}
+			else{
+				ret += now;
+			}
+		}
+		return ret;
+	}
+
 	std::string removeQuotes(std::string str){
 		assert(str[0] == '\'' || str[0] == '\"');
-		return str.substr(1, str.length()-2);
+		return transform(str.substr(1, str.length()-2));
 	}
 
 	
@@ -566,7 +604,7 @@ std::cout << "op = " << op << std::endl;
 #endif
 			assert(op == "*");
 			std::string ret = *fstring;
-			if(*sint == 0){
+			if(*sint <= 0){
 				ret = std::string();
 			}
 			for(int i=1;i<*sint;i++){
@@ -580,7 +618,7 @@ std::cout << "op = " << op << std::endl;
 #endif
 			assert(op == "*");
 			std::string ret = *sstring;
-			if(*gint == 0){
+			if(*gint <= 0){
 				ret = std::string();
 			}
 			for(int i=1;i<*gint;i++){
@@ -1633,12 +1671,20 @@ std::cout << "visitAtomexpr" << std::endl;
 		std::any down = visit(ctx->atom());
 		if(auto *val = std::any_cast<std::pair<std::string,int>>(&down); val){
 			if(val->second <= -7){
+				if(!ctx->trailer()){
+					funcId.erase(funcId.find(ctx->atom()->getText()));
+					return visit(ctx);
+				}
 #ifdef DEBUG
 std::cout << "visitOuterFunction" << std::endl;
 #endif
 				return functionWork(function[val->second], ctx->trailer());
 			}
 			if(val->second >= -6 && val->second <= -2){
+				if(!ctx->trailer()){
+					funcId.erase(funcId.find(ctx->atom()->getText()));
+					return visit(ctx);
+				}
 #ifdef DEBUG
 std::cout << "visitInsideFunction" << std::endl;
 #endif
@@ -1783,7 +1829,7 @@ std::cout << "atom:none" << std::endl;
 				isl = isr = false;
 			}
 		}
-		return ret;
+		return transform(ret);
 	}
 
 	virtual std::any visitFormat_string(Python3Parser::Format_stringContext *ctx) override {
