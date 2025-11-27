@@ -518,9 +518,6 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 			}
 		}
 		if(fstring && sstring){
-			while(true){
-				new char[1145];
-			}
 			assert(op == "+");
 			return std::make_pair(*fstring + *sstring,-1);
 		}
@@ -545,9 +542,6 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 					return std::make_pair(lv - sint->toDouble(),-1);
 				}
 			}
-		}
-		while(true){
-			new char[1145];
 		}
 		assert(false);
 		return false;
@@ -587,9 +581,6 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 			if(op == "%"){
 				return std::make_pair(fi % si,-1);
 			}
-			while(true){
-				new char[1145];
-			}
 			assert(false);
 			return false;
 		}
@@ -604,9 +595,6 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 			if(op == "//"){
 				return std::make_pair(std::floor(fi / si),-1);
 			}
-			while(true){
-				new char[1145];
-			}
 			assert(false);
 			return false;
 		}
@@ -614,11 +602,6 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 #ifdef DEBUG
 std::cout << "op = " << op << std::endl;
 #endif
-			if(op != "*"){
-				while(true){
-					new char[1145];
-				}
-			}
 			assert(op == "*");
 			std::string ret = *fstring;
 			if(*sint <= 0){
@@ -633,11 +616,6 @@ std::cout << "op = " << op << std::endl;
 #ifdef DEBUG
 std::cout << "op = " << op << std::endl;
 #endif
-			if(op != "*"){
-				while(true){
-					new char[1145];
-				}
-			}
 			assert(op == "*");
 			std::string ret = *sstring;
 			if(*gint <= 0){
@@ -675,9 +653,6 @@ std::cout << "op = " << op << std::endl;
 					return std::make_pair(int2048((long long)(std::floor(lv / sint->toDouble()))),-1);
 				}
 			}
-		}
-		while(true){
-			new char[1145];
 		}
 		assert(false);
 		return false;
@@ -724,10 +699,13 @@ std::cout << "size = " << fir.size() << "," << sec.size() << std::endl;
 std::cout << "testlist:" << i << " " << j << "\ntest" << std::endl;
 #endif
 					std::any lef = abstractize(visit(fir[j])), rig = got[j];
-					std::pair<std::any,int> lefv = std::any_cast<std::pair<std::any,int>>(lef),
-											rigv = std::any_cast<std::pair<std::any,int>>(rig);
-					lmem.push_back(lefv);
-					ret.push_back(rigv);
+					std::pair<std::any,int> *lefv = std::any_cast<std::pair<std::any,int>>(&lef),
+											*rigv = std::any_cast<std::pair<std::any,int>>(&rig);
+					if(!lefv || !rigv){
+						assert(false);
+					}
+					lmem.push_back(*lefv);
+					ret.push_back(*rigv);
 				}
 				for(int j=0;j<osi;j++){
 					//concretize(ret[j]);
@@ -1377,9 +1355,6 @@ unTie(nv, "visitTerm");
 		if(gbool){
 			return std::make_pair(int2048(*gbool),-1);
 		}
-		while(true){
-			new char[1145];
-		}
 		assert(false);
 		return false;
 	}
@@ -1397,9 +1372,6 @@ unTie(nv, "visitTerm");
 		}
 		if(gbool){
 			return std::make_pair(int2048(-*gbool),-1);
-		}
-		while(true){
-			new char[1145];
 		}
 		assert(false);
 		return false;
@@ -1505,9 +1477,6 @@ Will lead to error!
 				ret = now;
 			}
 			else{
-				while(true){
-					new char[1145];
-				}
 				assert(false);
 			}
 		}
@@ -1532,24 +1501,9 @@ std::cout << "\nfunctionWork end\n" << std::endl;
 	std::any insideFunction(int id, Python3Parser::TrailerContext *tra){
 		auto argls = tra->arglist();
 		if(!argls){
-			//assert(id == -2);//only print can have no args? No!
-			if(id == -2){
-				std::cout << std::endl;
-				return std::make_pair(std::string("insideFunction:Printed an empty arglist"),-1);
-			}
-			else if(id == -3){
-				return std::make_pair(int2048(0),-1);
-			}
-			else if(id == -4){
-				return std::make_pair(double(0),-1);
-			}
-			else if(id == -5){
-				return std::make_pair(std::string(0),-1);
-			}
-			else if(id == -6){
-				return std::make_pair(bool(false),-1);
-			}
-			assert(false);
+			assert(id == -2);//only print can have no args?
+			std::cout << std::endl;
+			return std::make_pair(std::string("insideFunction:Printed an empty arglist"),-1);
 		}
 		else{
 			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
