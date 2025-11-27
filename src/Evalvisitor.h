@@ -506,11 +506,17 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
-		assert(sstring && gint);
+		if(fstring){
+			return std::make_pair(*fstring,-1);
+		}
+		else{
+			return std::make_pair(*sstring,-1);
+		}
+		/*assert(fstring && sint);
 		while(true){
 			new char[114514];
 		}
-		/*assert(false);*/
+		assert(false);*/
 		return false;
 	}
 	
