@@ -144,7 +144,9 @@ std::cout << "abstractize : any" << std::endl;
 			return *got5;
 		}
 		if(!(gvector && gvector->size() >= 1)){
-			throw std::out_of_range("abs");
+			while(true){
+				new char[114514];
+			}
 		};
 #ifdef DEBUG_abstractize
 std::cout << "abstractize : gvector, size() = " << gvector->size() << std::endl;
@@ -230,7 +232,9 @@ std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].first;
 		}
-		throw std::out_of_range("wow");
+		while(true){
+			new char[114514];
+		}
 		assert(false);
 		return gave;
 	}
@@ -276,7 +280,9 @@ std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].second;
 		}
-		throw std::out_of_range("wow");
+		while(true){
+			new char[114514];
+		}
 		assert(false);
 		return gave;
 	}
