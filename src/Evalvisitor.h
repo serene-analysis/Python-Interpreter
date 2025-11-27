@@ -507,7 +507,10 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
-		assert(false);
+		while(true){
+			new char[114514];
+		}
+		/*assert(false);*/
 		return false;
 	}
 	
