@@ -188,7 +188,7 @@ std::cout << "concretize : bool" << std::endl;
 		while(true){
 			new char[1145];
 		}
-		assert(false);
+		/*assert(false);*/
 		return false;
 	}
 	
@@ -232,9 +232,9 @@ std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].first;
 		}
-		while(true){
+		/*while(true){
 			new char[114514];
-		}
+		}*/
 		assert(false);
 		return gave;
 	}
