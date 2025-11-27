@@ -506,7 +506,7 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
-		assert(fstring || sstring);
+		assert((fstring || sstring) && (gint || sint));
 		while(true){
 			new char[114514];
 		}
