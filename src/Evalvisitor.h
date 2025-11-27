@@ -1531,7 +1531,7 @@ std::cout << "print:bool" << std::endl;
 				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
 					if(dt->first == magic){
-						return std::make_pair(dt->first,-1);
+						return std::make_pair(int2048(0),-1);
 					}
 					else{
 						return *dt;
@@ -1551,6 +1551,9 @@ std::cout << "print:bool" << std::endl;
 			else if(id == -4){
 				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+					if(dt->first == magic){
+						dt->first = 0;
+					}
 					return std::make_pair(dt->first.toDouble(),-1);
 				}
 				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
@@ -1567,6 +1570,9 @@ std::cout << "print:bool" << std::endl;
 			else if(id == -5){
 				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
+					if(dt->first == magic){
+						return std::make_pair(std::string("None"),-1);
+					}
 					return std::make_pair(dt->first.toString(),-1);
 				}
 				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
@@ -1583,7 +1589,7 @@ std::cout << "print:bool" << std::endl;
 			else{
 				auto fir = concretize(visit(arg[0]->test()[0]));
 				if(auto *dt = std::any_cast<std::pair<int2048,int>>(&fir); dt){
-					return std::make_pair(dt->first == 0 ? false : true,-1);
+					return std::make_pair(dt->first == 0 || dt->first == magic ? false : true,-1);
 				}
 				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
 					return std::make_pair(dt->first == 0.0 ? false : true,-1);
