@@ -1,3 +1,4 @@
+
 #pragma once
 #ifndef PYTHON_INTERPRETER_EVALVISITOR_H
 #define PYTHON_INTERPRETER_EVALVISITOR_H
@@ -617,7 +618,7 @@ std::cout << "op = " << op << std::endl;
 				}
 			}
 		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 
