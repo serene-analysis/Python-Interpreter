@@ -472,15 +472,6 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				return std::make_pair(fi - si,-1);
 			}
 		}
-		if(gbool && sbool){
-			bool fi = *gbool, si = *sbool;
-			if(op == "+"){
-				return std::make_pair(int2048(fi + si),-1);
-			}
-			if(op == "-"){
-				return std::make_pair(int2048(fi - si),-1);
-			}
-		}
 		if(fstring && sstring){
 			//assert(op == "+");
 			return std::make_pair(*fstring + *sstring,-1);
@@ -507,6 +498,7 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
+		assert(fstring || sstring);
 		while(true){
 			new char[114514];
 		}
