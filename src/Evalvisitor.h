@@ -1,3 +1,4 @@
+
 #pragma once
 #ifndef PYTHON_INTERPRETER_EVALVISITOR_H
 #define PYTHON_INTERPRETER_EVALVISITOR_H
@@ -28,6 +29,7 @@ class EvalVisitor : public Python3ParserBaseVisitor {
 	std::unordered_map<std::string,int>funcId;
 	std::unordered_map<std::string,int>variableId;
 	std::unordered_map<int,std::any>memory[kMaxn];
+	std::vector<std::any>initMemory[kMaxn];
 	std::unordered_map<int,bool>covered[kMaxn];
 	std::unordered_map<int,int>globalPosition;
 	std::unordered_map<int,Python3Parser::FuncdefContext*>function;
@@ -144,7 +146,9 @@ std::cout << "abstractize : any" << std::endl;
 			return *got5;
 		}
 		if(!(gvector && gvector->size() >= 1)){
-			throw std::out_of_range("abs");
+			while(true){
+				new char[114514];
+			}
 		};
 #ifdef DEBUG_abstractize
 std::cout << "abstractize : gvector, size() = " << gvector->size() << std::endl;
@@ -186,7 +190,7 @@ std::cout << "concretize : bool" << std::endl;
 		while(true){
 			new char[1145];
 		}
-		assert(false);
+		/*assert(false);*/
 		return false;
 	}
 	
@@ -230,60 +234,25 @@ std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].first;
 		}
-		throw std::out_of_range("wow");
-		assert(false);
-		return gave;
-	}
-
-	
-	std::any secondUnTie(std::any gave, std::string pos){
-#ifdef DEBUG
-std::cout << "unTie! pos = " << pos << std::endl;
-#endif
-		gave = concretize(gave);
-		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
-		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
-		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
-		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
-		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
-		if(gint){
-#ifdef DEBUG_untie
-std::cout << "unTie:int2048" << std::endl;
-#endif
-			return gint->second;
+		while(true){
+			new char[114514];
 		}
-		if(gdouble){
-#ifdef DEBUG_untie
-std::cout << "unTie:double" << std::endl;
-#endif
-			return gdouble->second;
-		}
-		if(gbool){
-#ifdef DEBUG_untie
-std::cout << "unTie:bool" << std::endl;
-#endif
-			return gbool->second;
-		}
-		if(gstring){
-#ifdef DEBUG_untie
-std::cout << "unTie:std::string" << std::endl;
-#endif
-			return gstring->second;
-		}
-		if(gvector){
-#ifdef DEBUG_untie
-std::cout << "unTie:vector" << std::endl;
-#endif
-			return (*gvector)[0].second;
-		}
-		throw std::out_of_range("wow");
-		assert(false);
+		/*assert(false);*/
 		return gave;
 	}
 
 	virtual std::any visitFuncdef(Python3Parser::FuncdefContext *ctx) override {
 		funcId[ctx->NAME()->getText()] = func_id;
 		function[func_id] = ctx;
+		auto par = ctx->parameters();
+		if(par->typedargslist()){
+			auto test = par->typedargslist()->test();
+			std::vector<std::any>ngot;
+			for(int i=0;i<test.size();i++){
+				ngot.push_back(visit(test[i]));
+			}
+			initMemory[-func_id] = ngot;
+		}
 		func_id --;
 		return std::make_pair(std::any((int2048)(magic)),0);
 	}
@@ -492,6 +461,14 @@ std::cout << "op = " << op << std::endl;
 			sint = &sv;
 			//std::cout << "sbool turn to : " << *sint << std::endl;
 		}
+		if(fstring && *fstring == ""){
+			fv = int2048(0);
+			gint = &fv;
+		}
+		if(sstring && *sstring == ""){
+			sv = int2048(0);
+			sint = &sv;
+		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "+"){
@@ -511,15 +488,6 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 			}
 			if(op == "-"){
 				return std::make_pair(fi - si,-1);
-			}
-		}
-		if(gbool && sbool){
-			bool fi = *gbool, si = *sbool;
-			if(op == "+"){
-				return std::make_pair(int2048(fi + si),-1);
-			}
-			if(op == "-"){
-				return std::make_pair(int2048(fi - si),-1);
 			}
 		}
 		if(fstring && sstring){
@@ -548,7 +516,17 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
-		//assert(false);
+		if(fstring){
+			return std::make_pair(*fstring,-1);
+		}
+		else{
+			return std::make_pair(*sstring,-1);
+		}
+		/*assert(fstring && sint);
+		while(true){
+			new char[114514];
+		}
+		assert(false);*/
 		return false;
 	}
 	
@@ -1394,7 +1372,7 @@ unTie(nv, "visitTerm");
 		return ret;
 	}
 
-	std::any functionWork(Python3Parser::FuncdefContext *fun, Python3Parser::TrailerContext *tra){
+	std::any functionWork(Python3Parser::FuncdefContext *fun, Python3Parser::TrailerContext *tra, int function_id){
 		auto argls = tra->arglist();
 		std::vector<std::pair<std::any,int>>mem;
 		std::map<std::string,std::pair<std::any,int>>list;
@@ -1469,7 +1447,8 @@ Will lead to error!
 				}
 				else{
 					assignValue(std::make_pair(memory[depth][pos],pos), 
-								std::any_cast<std::pair<std::any,int>>(abstractize(visit(test[test.size()-(var.size()-i)]))));
+								std::any_cast<std::pair<std::any,int>>(abstractize(
+									initMemory[-function_id][initMemory[-function_id].size()-(var.size()-i)])));
 				}
 			}
 		}
@@ -1683,7 +1662,7 @@ std::cout << "visitAtomexpr" << std::endl;
 #ifdef DEBUG
 std::cout << "visitOuterFunction" << std::endl;
 #endif
-				return functionWork(function[val->second], ctx->trailer());
+				return functionWork(function[val->second], ctx->trailer(), val->second);
 			}
 			if(val->second >= -6 && val->second <= -2){
 				if(!ctx->trailer()){
