@@ -6,6 +6,7 @@
 #include "Python3ParserBaseVisitor.h"
 #include "int2048.h"
 #include <iomanip>
+#include <stdexcept>
 
 //#define DEBUG
 //#define DEBUG_name
@@ -142,7 +143,9 @@ std::cout << "abstractize : any" << std::endl;
 #endif
 			return *got5;
 		}
-		assert(gvector && gvector->size() >= 1);
+		if(!(gvector && gvector->size() >= 1)){
+			throw std::out_of_range("abs");
+		};
 #ifdef DEBUG_abstractize
 std::cout << "abstractize : gvector, size() = " << gvector->size() << std::endl;
 #endif
@@ -457,7 +460,7 @@ std::cout << "assign bool" << ", val = " << got4->first << std::endl;
 						memory[i][id] = got4->first;
 					}
 					else{
-						assert(false);
+						//assert(false);
 					}
 					//std::pair<std::any,int> gave = std::any_cast<std::pair<std::any,int>>(abstractize(sec));
 					//memory[i][id] = gave.first;
@@ -518,10 +521,7 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 			}
 		}
 		if(fstring && sstring){
-			while(true){
-				new char[1145];
-			}
-			assert(op == "+");
+			//assert(op == "+");
 			return std::make_pair(*fstring + *sstring,-1);
 		}
 		if(gint){
@@ -546,10 +546,7 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
-		while(true){
-			new char[1145];
-		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 	
@@ -587,10 +584,7 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 			if(op == "%"){
 				return std::make_pair(fi % si,-1);
 			}
-			while(true){
-				new char[1145];
-			}
-			assert(false);
+			//assert(false);
 			return false;
 		}
 		if(gdouble && sdouble){
@@ -604,22 +598,14 @@ std::cout << "mulDivMod : op = " << op << std::endl;
 			if(op == "//"){
 				return std::make_pair(std::floor(fi / si),-1);
 			}
-			while(true){
-				new char[1145];
-			}
-			assert(false);
+			//assert(false);
 			return false;
 		}
 		if(fstring && sint){
 #ifdef DEBUG
 std::cout << "op = " << op << std::endl;
 #endif
-			if(op != "*"){
-				while(true){
-					new char[1145];
-				}
-			}
-			assert(op == "*");
+			//assert(op == "*");
 			std::string ret = *fstring;
 			if(*sint <= 0){
 				ret = std::string();
@@ -633,12 +619,7 @@ std::cout << "op = " << op << std::endl;
 #ifdef DEBUG
 std::cout << "op = " << op << std::endl;
 #endif
-			if(op != "*"){
-				while(true){
-					new char[1145];
-				}
-			}
-			assert(op == "*");
+			//assert(op == "*");
 			std::string ret = *sstring;
 			if(*gint <= 0){
 				ret = std::string();
@@ -676,10 +657,7 @@ std::cout << "op = " << op << std::endl;
 				}
 			}
 		}
-		while(true){
-			new char[1145];
-		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 
@@ -724,10 +702,13 @@ std::cout << "size = " << fir.size() << "," << sec.size() << std::endl;
 std::cout << "testlist:" << i << " " << j << "\ntest" << std::endl;
 #endif
 					std::any lef = abstractize(visit(fir[j])), rig = got[j];
-					std::pair<std::any,int> lefv = std::any_cast<std::pair<std::any,int>>(lef),
-											rigv = std::any_cast<std::pair<std::any,int>>(rig);
-					lmem.push_back(lefv);
-					ret.push_back(rigv);
+					std::pair<std::any,int> *lefv = std::any_cast<std::pair<std::any,int>>(&lef),
+											*rigv = std::any_cast<std::pair<std::any,int>>(&rig);
+					if(!lefv || !rigv){
+						//assert(false);
+					}
+					lmem.push_back(*lefv);
+					ret.push_back(*rigv);
 				}
 				for(int j=0;j<osi;j++){
 					//concretize(ret[j]);
@@ -867,7 +848,7 @@ std::cout << "\nvisitCompoundStmt\n" << std::endl;
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
 		auto *gstring = std::any_cast<std::string>(&ret);
-		assert(gint || gdouble || gbool || gstring);
+		//assert(gint || gdouble || gbool || gstring);
 		return (gint && (*gint != 0 && *gint != magic)) || (gdouble && *gdouble) || (gbool && *gbool) || (gstring && !gstring->empty());
 	}
 	
@@ -1006,7 +987,7 @@ std::cout << "visitTest end" << std::endl;
 		auto *gdouble = std::any_cast<double>(&ret);
 		auto *gbool = std::any_cast<bool>(&ret);
 		auto *gstring = std::any_cast<std::string>(&ret);
-		assert(gint || gdouble || gbool || gstring);
+		//assert(gint || gdouble || gbool || gstring);
 		return (gint && (*gint == 0 || *gint == magic)) || (gdouble && !*gdouble) || (gbool && !*gbool) || (gstring && gstring->empty());
 	}
 
@@ -1218,7 +1199,7 @@ std::cout << "std::string,fi = " << fi << "\nsi = " << si << std::endl;
 		std::pair<std::any,int> *got5 = std::any_cast<std::pair<std::any,int>>(&gave);
 		if(!got && !got2 && !got3 && !got4 && !got5){
 			std::cout << "checkState error,name = " << name << std::endl;
-			assert(false);
+			//assert(false);
 		}
 		return;
 	}
@@ -1287,7 +1268,7 @@ std::cout << "comparison end,true" << std::endl;
 		if(all[5]){
 			return std::make_pair(std::string("!="),-1);
 		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 
@@ -1322,7 +1303,7 @@ std::cout << "end : visitArith_expr" << std::endl;
 		else if(ctx->MINUS()){
 			return std::make_pair(std::string("-"),-1);
 		}
-		assert(false);
+		//assert(false);
 		return visitChildren(ctx);
 	}
 
@@ -1359,7 +1340,7 @@ unTie(nv, "visitTerm");
 		else if(ctx->MOD()){
 			return std::make_pair(std::string("%"),-1);
 		}
-		assert(false);
+		//assert(false);
 		return visitChildren(ctx);
 	}
 
@@ -1377,10 +1358,7 @@ unTie(nv, "visitTerm");
 		if(gbool){
 			return std::make_pair(int2048(*gbool),-1);
 		}
-		while(true){
-			new char[1145];
-		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 
@@ -1398,10 +1376,7 @@ unTie(nv, "visitTerm");
 		if(gbool){
 			return std::make_pair(int2048(-*gbool),-1);
 		}
-		while(true){
-			new char[1145];
-		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 
@@ -1505,10 +1480,7 @@ Will lead to error!
 				ret = now;
 			}
 			else{
-				while(true){
-					new char[1145];
-				}
-				assert(false);
+				//assert(false);
 			}
 		}
 #ifdef DEBUG_name
@@ -1532,24 +1504,9 @@ std::cout << "\nfunctionWork end\n" << std::endl;
 	std::any insideFunction(int id, Python3Parser::TrailerContext *tra){
 		auto argls = tra->arglist();
 		if(!argls){
-			//assert(id == -2);//only print can have no args? No!
-			if(id == -2){
-				std::cout << std::endl;
-				return std::make_pair(std::string("insideFunction:Printed an empty arglist"),-1);
-			}
-			else if(id == -3){
-				return std::make_pair(int2048(0),-1);
-			}
-			else if(id == -4){
-				return std::make_pair(double(0),-1);
-			}
-			else if(id == -5){
-				return std::make_pair(std::string(0),-1);
-			}
-			else if(id == -6){
-				return std::make_pair(bool(false),-1);
-			}
-			assert(false);
+			//assert(id == -2);//only print can have no args?
+			std::cout << std::endl;
+			return std::make_pair(std::string("insideFunction:Printed an empty arglist"),-1);
 		}
 		else{
 			std::vector<Python3Parser::ArgumentContext*> arg = argls->argument();
@@ -1620,7 +1577,7 @@ std::cout << "print:bool" << std::endl;
 						}
 					}
 					else{
-						assert(false);
+						//assert(false);
 					}
 				}
 				std::cout << std::endl;
@@ -1649,7 +1606,7 @@ std::cout << "print:bool" << std::endl;
 				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
 					return std::make_pair((int2048)(dt->first),-1);
 				}
-				assert(false);
+				//assert(false);
 			}
 			else if(id == -4){
 				auto fir = concretize(visit(arg[0]->test()[0]));
@@ -1668,7 +1625,7 @@ std::cout << "print:bool" << std::endl;
 				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
 					return std::make_pair((double)(dt->first ? 1 : 0),-1);
 				}
-				assert(false);
+				//assert(false);
 			}
 			else if(id == -5){
 				auto fir = concretize(visit(arg[0]->test()[0]));
@@ -1687,7 +1644,7 @@ std::cout << "print:bool" << std::endl;
 				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
 					return std::make_pair((std::string)(dt->first ? "True" : "False"),-1);//How?
 				}
-				assert(false);
+				//assert(false);
 			}
 			else{
 				auto fir = concretize(visit(arg[0]->test()[0]));
@@ -1703,10 +1660,10 @@ std::cout << "print:bool" << std::endl;
 				if(auto *dt = std::any_cast<std::pair<bool,int>>(&fir); dt){
 					return *dt;
 				}
-				assert(false);
+				//assert(false);
 			}
 		}
-		assert(false);
+		//assert(false);
 		return false;
 	}
 
@@ -1741,7 +1698,7 @@ std::cout << "std::pair<std::string,int>" << std::endl;
 #endif
 			return down;
 		}
-		assert(ctx->trailer() == nullptr);
+		//assert(ctx->trailer() == nullptr);
 		//checkState(down, "visitAtom_expr");
 		return down;
 	}
@@ -1844,7 +1801,7 @@ std::cout << "atom:none" << std::endl;
 		if(auto now = ctx->format_string(); now){
 			return visit(now);
 		}
-		assert(false);
+		//assert(false);
 		return visitChildren(ctx);
 	}
 
@@ -1909,7 +1866,7 @@ std::cout << "brace content gotten" << std::endl;
 					ret += (now->first ? "True" : "False");
 				}
 				else{
-					assert(false);
+					//assert(false);
 				}
 				np++;
 			}
@@ -1940,7 +1897,7 @@ std::cout << "np = " << np << std::endl;
 				ret += (now->first ? "True" : "False");
 			}
 			else{
-				assert(false);
+				//assert(false);
 			}
 			np++;
 		}
