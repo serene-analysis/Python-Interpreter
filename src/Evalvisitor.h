@@ -239,54 +239,6 @@ std::cout << "unTie:vector" << std::endl;
 		return gave;
 	}
 
-	
-	std::any secondUnTie(std::any gave, std::string pos){
-#ifdef DEBUG
-std::cout << "unTie! pos = " << pos << std::endl;
-#endif
-		gave = concretize(gave);
-		auto *gint = std::any_cast<std::pair<int2048,int>>(&gave);
-		auto *gdouble = std::any_cast<std::pair<double,int>>(&gave);
-		auto *gbool = std::any_cast<std::pair<bool,int>>(&gave);
-		auto *gstring = std::any_cast<std::pair<std::string,int>>(&gave);
-		auto *gvector = std::any_cast<std::vector<std::pair<std::any,int>>>(&gave);
-		if(gint){
-#ifdef DEBUG_untie
-std::cout << "unTie:int2048" << std::endl;
-#endif
-			return gint->second;
-		}
-		if(gdouble){
-#ifdef DEBUG_untie
-std::cout << "unTie:double" << std::endl;
-#endif
-			return gdouble->second;
-		}
-		if(gbool){
-#ifdef DEBUG_untie
-std::cout << "unTie:bool" << std::endl;
-#endif
-			return gbool->second;
-		}
-		if(gstring){
-#ifdef DEBUG_untie
-std::cout << "unTie:std::string" << std::endl;
-#endif
-			return gstring->second;
-		}
-		if(gvector){
-#ifdef DEBUG_untie
-std::cout << "unTie:vector" << std::endl;
-#endif
-			return (*gvector)[0].second;
-		}
-		while(true){
-			new char[114514];
-		}
-		assert(false);
-		return gave;
-	}
-
 	virtual std::any visitFuncdef(Python3Parser::FuncdefContext *ctx) override {
 		funcId[ctx->NAME()->getText()] = func_id;
 		function[func_id] = ctx;
