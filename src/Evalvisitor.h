@@ -451,6 +451,14 @@ std::cout << "op = " << op << std::endl;
 			sint = &sv;
 			//std::cout << "sbool turn to : " << *sint << std::endl;
 		}
+		if(fstring && *fstring == ""){
+			fv = int2048(0);
+			gint = &fv;
+		}
+		if(sstring && *sstring == ""){
+			sv = int2048(0);
+			sint = &sv;
+		}
 		if(gint && sint){
 			int2048 fi = *gint, si = *sint;
 			if(op == "+"){
