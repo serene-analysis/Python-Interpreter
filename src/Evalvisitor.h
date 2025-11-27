@@ -142,6 +142,9 @@ std::cout << "concretize : bool" << std::endl;
 #endif
 			return std::make_pair(*got4,must->second);
 		}
+		while(true){
+			new char[1145];
+		}
 		assert(false);
 		return false;
 	}
