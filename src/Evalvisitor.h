@@ -506,7 +506,7 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 				}
 			}
 		}
-		//assert(false);
+		assert(false);
 		return false;
 	}
 	
