@@ -236,9 +236,9 @@ std::string int2048::toString(){
         now.neg = false;
         assert(false);
     }
-    //if(now.pol.size() == 1 && now[0] == 0){
-    //    assert(false);
-    //}
+    if(now.pol.size() == 1 && now[0] == 0){
+        return "0";
+    }
     std::ios::sync_with_stdio(false);
     if(now.neg){
         ret += '-';
