@@ -230,6 +230,7 @@ std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].first;
 		}
+		throw std::out_of_range("wow");
 		assert(false);
 		return gave;
 	}
@@ -275,6 +276,7 @@ std::cout << "unTie:vector" << std::endl;
 #endif
 			return (*gvector)[0].second;
 		}
+		throw std::out_of_range("wow");
 		assert(false);
 		return gave;
 	}
