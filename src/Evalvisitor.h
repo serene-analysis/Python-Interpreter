@@ -473,10 +473,10 @@ std::cout << "add, ans = " << fi << " + " << si << std::endl;
 		if(gbool && sbool){
 			bool fi = *gbool, si = *sbool;
 			if(op == "+"){
-				return std::make_pair(fi + si,-1);
+				return std::make_pair(int2048(fi + si),-1);
 			}
 			if(op == "-"){
-				return std::make_pair(fi - si,-1);
+				return std::make_pair(int2048(fi - si),-1);
 			}
 		}
 		if(fstring && sstring){
@@ -646,7 +646,11 @@ std::cout << "assign" << std::endl;
 					}
 				}
 				//std::cout << "size = " << fir.size() << "," << got.size() << std::endl;
-				assert(fir.size() == got.size());
+				if(fir.size() != got.size()){
+					while(true){
+						new char[1145];
+					}
+				}
 #ifdef DEBUG_assign
 std::cout << "size = " << fir.size() << "," << sec.size() << std::endl;
 #endif
@@ -1303,11 +1307,15 @@ unTie(nv, "visitTerm");
 		ret = unTie(ret, "getVal");
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
+		bool *gbool = std::any_cast<bool>(&ret);
 		if(gint){
 			return std::make_pair(*gint,-1);
 		}
 		if(gdouble){
 			return std::make_pair(*gdouble,-1);
+		}
+		if(gbool){
+			return std::make_pair(int2048(*gbool),-1);
 		}
 		assert(false);
 		return false;
@@ -1317,11 +1325,15 @@ unTie(nv, "visitTerm");
 		ret = unTie(ret, "getNegativeVal");
 		int2048 *gint = std::any_cast<int2048>(&ret);
 		auto *gdouble = std::any_cast<double>(&ret);
+		bool *gbool = std::any_cast<bool>(&ret);
 		if(gint){
 			return std::make_pair(-*gint,-1);
 		}
 		if(gdouble){
 			return std::make_pair(-*gdouble,-1);
+		}
+		if(gbool){
+			return std::make_pair(int2048(-*gbool),-1);
 		}
 		assert(false);
 		return false;
