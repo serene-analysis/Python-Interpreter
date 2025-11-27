@@ -1538,7 +1538,11 @@ std::cout << "print:bool" << std::endl;
 					}
 				}
 				if(auto *dt = std::any_cast<std::pair<double,int>>(&fir); dt){
-					return std::make_pair((int2048)((long long)std::floor(dt->first)),-1);
+					long long nv = std::floor(dt->first);
+					if(dt->first < 0){
+						nv = -std::floor(-dt->first);
+					}
+					return std::make_pair((int2048)(nv),-1);
 				}
 				if(auto *dt = std::any_cast<std::pair<std::string,int>>(&fir); dt){
 					return std::make_pair((int2048)(dt->first),-1);
